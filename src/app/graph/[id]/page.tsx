@@ -86,11 +86,21 @@ export default async function GraphPage({
               </code>
             </p>
           </div>
-          {isAdmin && (
-            <span className="rounded-full bg-[#7fdb9a]/10 px-3 py-1 text-xs font-semibold text-[#7fdb9a]">
-              Admin
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link
+                href={`/graph/${id}/import`}
+                className="rounded-xl border border-white/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-white/5"
+              >
+                Import TreeDown
+              </Link>
+            )}
+            {isAdmin && (
+              <span className="rounded-full bg-[#7fdb9a]/10 px-3 py-1 text-xs font-semibold text-[#7fdb9a]">
+                Admin
+              </span>
+            )}
+          </div>
         </div>
 
         <PersonList

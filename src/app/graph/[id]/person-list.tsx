@@ -14,6 +14,35 @@ const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   partner: "Partner",
 };
 
+const RELATIONSHIP_TYPES: { value: RelationshipType; label: string }[] = [
+  { value: "biological_parent", label: "Parent (biological)" },
+  { value: "adoptive_parent", label: "Parent (adoptive)" },
+  { value: "step_parent", label: "Step-parent" },
+  { value: "spouse", label: "Spouse" },
+  { value: "ex_spouse", label: "Ex-spouse" },
+  { value: "partner", label: "Partner" },
+];
+
+function getDirectionalLabel(
+  type: RelationshipType,
+  isPersonA: boolean,
+): string {
+  switch (type) {
+    case "biological_parent":
+      return isPersonA ? "Parent of" : "Child of";
+    case "adoptive_parent":
+      return isPersonA ? "Adoptive parent of" : "Adopted by";
+    case "step_parent":
+      return isPersonA ? "Step-parent of" : "Step-child of";
+    case "spouse":
+      return "Spouse of";
+    case "ex_spouse":
+      return "Ex-spouse of";
+    case "partner":
+      return "Partner of";
+  }
+}
+
 export default function PersonList({
   graphId,
   initialPersons,
@@ -26,12 +55,21 @@ export default function PersonList({
   isAdmin: boolean;
 }) {
   const [persons, setPersons] = useState<Person[]>(initialPersons);
-  const [relationships] = useState<Relationship[]>(initialRelationships);
+  const [relationships, setRelationships] =
+    useState<Relationship[]>(initialRelationships);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPronouns, setNewPronouns] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Relationship form state
+  const [addingRelFor, setAddingRelFor] = useState<string | null>(null);
+  const [relOtherId, setRelOtherId] = useState("");
+  const [relType, setRelType] = useState<RelationshipType>("biological_parent");
+  const [relLoading, setRelLoading] = useState(false);
+  const [relError, setRelError] = useState<string | null>(null);
+
   const router = useRouter();
 
   async function handleAddPerson(e: React.FormEvent) {
@@ -65,12 +103,57 @@ export default function PersonList({
     }
 
     if (data) {
-      setPersons((prev) => [...prev, data as Person].sort((a, b) =>
-        a.display_name.localeCompare(b.display_name)
-      ));
+      setPersons((prev) =>
+        [...prev, data as Person].sort((a, b) =>
+          a.display_name.localeCompare(b.display_name),
+        ),
+      );
       setNewName("");
       setNewPronouns("");
       setShowAddForm(false);
+      router.refresh();
+    }
+  }
+
+  async function handleAddRelationship(e: React.FormEvent) {
+    e.preventDefault();
+    if (!addingRelFor || !relOtherId) return;
+
+    setRelLoading(true);
+    setRelError(null);
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error: insertError } = await supabase
+      .from("relationships")
+      .insert({
+        graph_id: graphId,
+        person_a: addingRelFor,
+        person_b: relOtherId,
+        type: relType,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    setRelLoading(false);
+
+    if (insertError) {
+      setRelError(insertError.message);
+      return;
+    }
+
+    if (data) {
+      setRelationships((prev) => [...prev, data as Relationship]);
+      setAddingRelFor(null);
+      setRelOtherId("");
+      setRelType("biological_parent");
+      setRelError(null);
       router.refresh();
     }
   }
@@ -170,6 +253,9 @@ export default function PersonList({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {persons.map((person) => {
             const rels = getRelationshipsFor(person.id);
+            const isAddingRel = addingRelFor === person.id;
+            const otherPersons = persons.filter((p) => p.id !== person.id);
+
             return (
               <div
                 key={person.id}
@@ -195,17 +281,98 @@ export default function PersonList({
                     Born: {person.birth_date}
                   </p>
                 )}
+
+                {/* Relationships */}
                 {rels.length > 0 && (
-                  <div className="mt-3 border-t border-white/10 pt-3">
+                  <div className="mt-3 space-y-1 border-t border-white/10 pt-3">
                     {rels.map((rel, i) => (
                       <p key={i} className="text-xs text-white/50">
                         <span className="text-[#7fdb9a]">
-                          {RELATIONSHIP_LABELS[rel.type]}
+                          {getDirectionalLabel(rel.type, rel.isA)}
                         </span>{" "}
-                        {rel.isA ? "of" : "—"} {rel.otherName}
+                        {rel.otherName}
                       </p>
                     ))}
                   </div>
+                )}
+
+                {/* Add Relationship */}
+                {isAdmin && !isAddingRel && otherPersons.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setAddingRelFor(person.id);
+                      setRelOtherId(otherPersons[0].id);
+                      setRelType("biological_parent");
+                      setRelError(null);
+                    }}
+                    className="mt-3 text-xs text-white/30 transition hover:text-[#7fdb9a]"
+                  >
+                    + Add relationship
+                  </button>
+                )}
+
+                {isAddingRel && (
+                  <form
+                    onSubmit={handleAddRelationship}
+                    className="mt-3 space-y-3 border-t border-white/10 pt-3"
+                  >
+                    <div>
+                      <label className="mb-1 block text-xs text-white/50">
+                        Relationship
+                      </label>
+                      <select
+                        value={relType}
+                        onChange={(e) =>
+                          setRelType(e.target.value as RelationshipType)
+                        }
+                        className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white focus:border-[#7fdb9a] focus:outline-none"
+                      >
+                        {RELATIONSHIP_TYPES.map((rt) => (
+                          <option key={rt.value} value={rt.value}>
+                            {rt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-white/50">
+                        Of
+                      </label>
+                      <select
+                        value={relOtherId}
+                        onChange={(e) => setRelOtherId(e.target.value)}
+                        className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-1.5 text-sm text-white focus:border-[#7fdb9a] focus:outline-none"
+                      >
+                        {otherPersons.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.display_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {relError && (
+                      <p className="text-xs text-red-400">{relError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={relLoading}
+                        className="rounded-lg bg-[#7fdb9a] px-4 py-1.5 text-xs font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
+                      >
+                        {relLoading ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingRelFor(null);
+                          setRelError(null);
+                        }}
+                        className="rounded-lg border border-white/20 px-4 py-1.5 text-xs transition hover:bg-white/5"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
                 )}
               </div>
             );
