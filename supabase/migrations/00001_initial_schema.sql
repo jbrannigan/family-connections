@@ -76,21 +76,47 @@ alter table memberships enable row level security;
 create policy "Users see own memberships"
   on memberships for select using (auth.uid() = user_id);
 
--- Admins can manage memberships in their graphs
-create policy "Admins manage memberships"
-  on memberships for all using (
-    exists (
-      select 1 from memberships m
-      where m.graph_id = memberships.graph_id
-        and m.user_id = auth.uid()
-        and m.role = 'admin'
+-- Graph owners can insert the first membership (bootstrap as admin)
+create policy "Owners bootstrap membership"
+  on memberships for insert with check (
+    auth.uid() = user_id
+    and exists (
+      select 1 from family_graphs
+      where family_graphs.id = memberships.graph_id
+        and family_graphs.owner_id = auth.uid()
     )
   );
 
--- Graph visibility: members only
-create policy "Members see their graphs"
+-- Users can join graphs via invite code (insert own membership as member)
+create policy "Users join graphs"
+  on memberships for insert with check (
+    auth.uid() = user_id
+    and role = 'member'
+  );
+
+-- Admins can update memberships in their graphs
+create policy "Admins update memberships"
+  on memberships for update using (
+    graph_id in (
+      select graph_id from memberships
+      where user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- Admins can delete memberships in their graphs
+create policy "Admins delete memberships"
+  on memberships for delete using (
+    graph_id in (
+      select graph_id from memberships
+      where user_id = auth.uid() and role = 'admin'
+    )
+  );
+
+-- Graph visibility: members or owners (owner needs SELECT right after INSERT)
+create policy "Members or owners see graphs"
   on family_graphs for select using (
-    exists (
+    auth.uid() = owner_id
+    or exists (
       select 1 from memberships
       where memberships.graph_id = family_graphs.id
         and memberships.user_id = auth.uid()

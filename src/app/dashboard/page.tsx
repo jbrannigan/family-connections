@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import SignOutButton from "./sign-out-button";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -37,7 +38,10 @@ export default async function DashboardPage() {
               Family Connections
             </span>
           </div>
-          <span className="text-sm text-white/50">{user.email}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-white/50">{user.email}</span>
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
