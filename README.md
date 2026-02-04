@@ -38,7 +38,7 @@ git clone https://github.com/jbrannigan/family-connections.git
 cd family-connections
 npm install
 cp .env.local.example .env.local
-# Edit .env.local with your Supabase project URL and anon key
+# Edit .env.local with your Supabase project URL and publishable key
 ```
 
 ### Database
@@ -60,12 +60,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jbrannigan/family-connections&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jbrannigan/family-connections&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
 
 Set the environment variables in your Vercel project settings:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
 ## Project Structure
 
