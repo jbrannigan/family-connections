@@ -212,9 +212,11 @@ export default function ImportForm({ graphId }: { graphId: string }) {
                 const typeLabel =
                   r.type === "spouse"
                     ? "married to"
-                    : r.type === "biological_parent"
-                      ? "parent of"
-                      : r.type;
+                    : r.type === "ex_spouse"
+                      ? "ex-spouse of"
+                      : r.type === "biological_parent"
+                        ? "parent of"
+                        : r.type;
 
                 return (
                   <p key={i} className="text-sm text-white/50">

@@ -5,10 +5,11 @@
  *   - Each line is a person or union
  *   - Indentation (tabs or spaces) = parent-child hierarchy
  *   - "Name1 & Name2" or "Name1 - Name2" = a union (married couple)
+ *   - Multiple marriages: "Name1 & Spouse1 (Divorced) & Spouse2"
  *   - Children are indented under their parent/union
- *   - Parenthesized metadata is stripped: (1870-1909), (M- date), (Div), (b. date)
- *   - Only the first person in a couple is a biological child of the parent line
- *   - The second person married into the family
+ *   - Parenthesized metadata: (1870-1909), (M- date), (Div), (b. date)
+ *   - Only the first person in a line is a biological child of the parent
+ *   - Children belong to the primary person + the last/current spouse
  */
 
 import type { RelationshipType } from "@/types/database";
@@ -31,10 +32,17 @@ export interface TreeDownImportResult {
 }
 
 interface TreeNode {
-  tempId: string;
-  raw: string;
+  raw: string; // original line content (trimmed but not metadata-stripped)
   indent: number;
   children: TreeNode[];
+}
+
+/** Parsed result of a single line */
+interface ParsedLine {
+  /** The primary person (first name on the line) */
+  primaryName: string;
+  /** Spouses in order, with relationship type */
+  spouses: { name: string; type: RelationshipType }[];
 }
 
 let nextId = 0;
@@ -60,49 +68,46 @@ function isNickname(inner: string): boolean {
   const metaWords = new Set(["Div", "Now", "Separated"]);
   if (metaWords.has(trimmed)) return false;
   // A nickname is 1-2 short words, all letters, no digits or punctuation
-  return /^[A-Z][a-z]+(\s[A-Z][a-z]+)?$/.test(trimmed) && trimmed.length < 20;
+  return (
+    /^[A-Z][a-z]+(\s[A-Z][a-z]+)?$/.test(trimmed) && trimmed.length < 20
+  );
 }
 
 /**
- * Strip parenthesized metadata from a line, preserving nickname parens.
+ * Strip parenthesized metadata from a text segment, preserving nickname parens.
  * Handles nested parentheses by finding balanced groups.
- *
- * Keeps: Margaret (Peggy), Catherine (Kate)
- * Removes: (1870-1909), (M- 13 July 1894), (Div), (b. 27 October 1988),
- *          (divorced), (Divorcing 2025), (M-?), (Now Barbara McGinty),
- *          (Fran & Jack Snodgrass (M- 1976))
  */
-function stripMetadata(line: string): string {
+function stripMetadata(text: string): string {
   let result = "";
   let i = 0;
 
-  while (i < line.length) {
-    if (line[i] === "(") {
+  while (i < text.length) {
+    if (text[i] === "(") {
       // Find the matching closing paren, handling nesting
       let depth = 1;
       let j = i + 1;
-      while (j < line.length && depth > 0) {
-        if (line[j] === "(") depth++;
-        if (line[j] === ")") depth--;
+      while (j < text.length && depth > 0) {
+        if (text[j] === "(") depth++;
+        if (text[j] === ")") depth--;
         j++;
       }
 
-      const inner = line.substring(i + 1, j - 1);
+      const inner = text.substring(i + 1, j - 1);
 
       if (isNickname(inner)) {
         // Keep nickname parens
-        result += line.substring(i, j);
+        result += text.substring(i, j);
       }
       // Otherwise: skip the entire parenthesized group (remove it)
 
       i = j;
     } else {
-      result += line[i];
+      result += text[i];
       i++;
     }
   }
 
-  // Clean up stray closing parens, trailing commas, trailing years, question marks
+  // Clean up stray closing parens, commas, trailing years, question marks
   result = result
     .replace(/\)/g, "") // stray closing parens
     .replace(/\s*,\s*/g, " ") // remove commas (leftover from metadata removal)
@@ -116,21 +121,149 @@ function stripMetadata(line: string): string {
 }
 
 /**
- * Detect if a cleaned line represents a union (couple).
- * Supports both " & " and " - " as separators.
+ * Check if a text segment contains divorce indicators.
  */
-function findUnionSplit(
-  cleaned: string,
-): { separator: string; index: number } | null {
-  // First try " & " — the primary separator
-  const ampIdx = cleaned.indexOf(" & ");
-  if (ampIdx > 0) return { separator: " & ", index: ampIdx };
+function hasDivorceIndicator(text: string): boolean {
+  return /\b(div|divorced|divorcing|separated)\b/i.test(text);
+}
 
-  // Then try " - " — secondary separator used in the Fitzgerald branch
-  const dashIdx = cleaned.indexOf(" - ");
-  if (dashIdx > 0) return { separator: " - ", index: dashIdx };
+/**
+ * Find all top-level `&` positions in a string (not inside parentheses).
+ * Returns the character indices of the `&` characters.
+ */
+function findTopLevelAmpersands(text: string): number[] {
+  const positions: number[] = [];
+  let depth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "(") depth++;
+    else if (text[i] === ")") depth = Math.max(0, depth - 1);
+    else if (text[i] === "&" && depth === 0) {
+      // Check it's " & " (with spaces)
+      if (
+        i > 0 &&
+        i < text.length - 1 &&
+        text[i - 1] === " " &&
+        text[i + 1] === " "
+      ) {
+        positions.push(i);
+      }
+    }
+  }
+
+  return positions;
+}
+
+/**
+ * Find a top-level " - " separator in a string (not inside parentheses).
+ * Only returns one (the first), since dash separators are only used for
+ * simple single-marriage lines.
+ */
+function findTopLevelDash(text: string): number | null {
+  let depth = 0;
+
+  for (let i = 0; i < text.length - 2; i++) {
+    if (text[i] === "(") depth++;
+    else if (text[i] === ")") depth = Math.max(0, depth - 1);
+    else if (
+      depth === 0 &&
+      text[i] === " " &&
+      text[i + 1] === "-" &&
+      text[i + 2] === " "
+    ) {
+      return i + 1; // position of the dash
+    }
+  }
 
   return null;
+}
+
+/**
+ * Parse a raw line into a primary person and their spouses.
+ * Handles multiple marriages on a single line.
+ *
+ * Examples:
+ *   "James McGhee (1936-2006) & Charlene Carter (M- 1963, Divorced) & Sharon Callan (M- 1982, Separated)"
+ *   → primary: "James McGhee", spouses: [{name: "Charlene Carter", type: "ex_spouse"}, {name: "Sharon Callan", type: "ex_spouse"}]
+ *
+ *   "Margaret (Peggy) McGinty (1933-2024) & James Brannigan (1932-2004) (M- 5 February 1955, NY)"
+ *   → primary: "Margaret (Peggy) McGinty", spouses: [{name: "James Brannigan", type: "spouse"}]
+ *
+ *   "Maureen - Dennis Murray"
+ *   → primary: "Maureen", spouses: [{name: "Dennis Murray", type: "spouse"}]
+ *
+ *   "Timothy"
+ *   → primary: "Timothy", spouses: []
+ */
+function parseLine(raw: string): ParsedLine | null {
+  // First check for ampersand-separated unions (can be multiple)
+  const ampPositions = findTopLevelAmpersands(raw);
+
+  if (ampPositions.length > 0) {
+    // Split the line at each top-level &
+    const segments: string[] = [];
+    let start = 0;
+    for (const pos of ampPositions) {
+      segments.push(raw.substring(start, pos - 1)); // -1 to exclude the space before &
+      start = pos + 2; // +2 to skip "& "
+    }
+    segments.push(raw.substring(start));
+
+    const primaryName = stripMetadata(segments[0]);
+    if (!primaryName || primaryName === "?") return null;
+
+    const spouses: { name: string; type: RelationshipType }[] = [];
+
+    for (let i = 1; i < segments.length; i++) {
+      const rawSegment = segments[i];
+      const cleanName = stripMetadata(rawSegment);
+
+      if (!cleanName || cleanName === "?") continue;
+
+      // Determine relationship type based on metadata in this segment
+      // AND the text between this spouse and the next (or end of line)
+      // Check the raw segment AND the raw text around this position for divorce indicators
+      const isDivorced = hasDivorceIndicator(rawSegment);
+      // If there's a subsequent spouse, this one is likely an ex
+      const hasSubsequentSpouse = i < segments.length - 1;
+
+      let relType: RelationshipType = "spouse";
+      if (isDivorced || hasSubsequentSpouse) {
+        relType = "ex_spouse";
+      }
+
+      spouses.push({ name: cleanName, type: relType });
+    }
+
+    return { primaryName, spouses };
+  }
+
+  // Check for dash-separated union (simple single marriage)
+  const dashPos = findTopLevelDash(raw);
+  if (dashPos !== null) {
+    const primaryName = stripMetadata(raw.substring(0, dashPos - 1));
+    const spouseName = stripMetadata(raw.substring(dashPos + 2));
+
+    if (!primaryName || primaryName === "?") return null;
+
+    const spouses: { name: string; type: RelationshipType }[] = [];
+    if (spouseName && spouseName !== "?") {
+      // Check if divorced
+      const isDivorced = hasDivorceIndicator(raw);
+      spouses.push({
+        name: spouseName,
+        type: isDivorced ? "ex_spouse" : "spouse",
+      });
+    }
+
+    return { primaryName, spouses };
+  }
+
+  // Single person (no union)
+  const name = stripMetadata(raw);
+  if (!name || name === "?") return null;
+
+  return { primaryName: name, spouses: [] };
 }
 
 /**
@@ -149,18 +282,18 @@ export function importTreeDown(text: string): TreeDownImportResult {
     return { persons, relationships, warnings: ["Empty input"] };
   }
 
-  // Build tree structure from indentation
+  // Build tree structure from indentation (using raw lines)
   const nodes: TreeNode[] = [];
   const stack: TreeNode[] = [];
 
   for (const line of lines) {
     const indent = getIndent(line);
-    const raw = stripMetadata(line.trim());
+    const raw = line.trim();
 
-    // Skip empty lines after stripping
+    // Skip empty lines
     if (!raw) continue;
 
-    const node: TreeNode = { tempId: tempId(), raw, indent, children: [] };
+    const node: TreeNode = { raw, indent, children: [] };
 
     // Pop stack until we find the parent (lower indent)
     while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
@@ -192,70 +325,50 @@ export function importTreeDown(text: string): TreeDownImportResult {
 
   // Process nodes recursively
   function processNode(node: TreeNode, parentIds: string[]) {
-    const union = findUnionSplit(node.raw);
+    const parsed = parseLine(node.raw);
 
-    if (union) {
-      const nameA = node.raw.substring(0, union.index).trim();
-      const nameB = node.raw.substring(union.index + union.separator.length).trim();
+    if (!parsed) {
+      warnings.push(`Skipping unparseable line: ${node.raw.substring(0, 60)}`);
+      return;
+    }
 
-      // Skip empty or placeholder names
-      if (!nameA || nameA === "?") {
-        warnings.push(`Skipping unnamed person in: ${node.raw}`);
-        return;
-      }
+    const primaryId = getOrCreatePerson(parsed.primaryName);
 
-      const idA = getOrCreatePerson(nameA);
-      const idB = nameB && nameB !== "?"
-        ? getOrCreatePerson(nameB)
-        : null;
+    // Connect primary person to parents (biological child)
+    for (const pid of parentIds) {
+      relationships.push({
+        parentTempId: pid,
+        childTempId: primaryId,
+        type: "biological_parent",
+      });
+    }
 
-      // Spouse relationship
-      if (idB) {
-        relationships.push({
-          parentTempId: idA,
-          childTempId: idB,
-          type: "spouse",
-        });
-      }
+    // Create spouse relationships
+    const spouseIds: string[] = [];
+    for (const spouse of parsed.spouses) {
+      const spouseId = getOrCreatePerson(spouse.name);
+      spouseIds.push(spouseId);
 
-      // Only the FIRST person (A) is a biological child of the parent
-      // The second person (B) married into the family
-      for (const pid of parentIds) {
-        relationships.push({
-          parentTempId: pid,
-          childTempId: idA,
-          type: "biological_parent",
-        });
-      }
+      relationships.push({
+        parentTempId: primaryId,
+        childTempId: spouseId,
+        type: spouse.type,
+      });
+    }
 
-      // Children of this union have both spouses as parents
-      const childParents = idB ? [idA, idB] : [idA];
-      for (const child of node.children) {
-        processNode(child, childParents);
-      }
-    } else {
-      // Single person
-      const name = node.raw.trim();
-      if (!name || name === "?") {
-        warnings.push(`Skipping unnamed person`);
-        return;
-      }
+    // Determine who the children's parents are:
+    // - Primary person is always a parent
+    // - The LAST spouse (current/most recent) is the other parent
+    //   (unless there are no spouses, then just the primary)
+    const lastSpouseId = spouseIds.length > 0
+      ? spouseIds[spouseIds.length - 1]
+      : null;
+    const childParents = lastSpouseId
+      ? [primaryId, lastSpouseId]
+      : [primaryId];
 
-      const id = getOrCreatePerson(name);
-
-      // Connect to parents
-      for (const pid of parentIds) {
-        relationships.push({
-          parentTempId: pid,
-          childTempId: id,
-          type: "biological_parent",
-        });
-      }
-
-      // Process children
-      for (const child of node.children) {
-        processNode(child, [id]);
-      }
+    for (const child of node.children) {
+      processNode(child, childParents);
     }
   }
 
