@@ -141,6 +141,11 @@ export default function DTreeView({
         // Transform data
         const treeData = transformToDTreeData(persons, relationships);
 
+        // Debug: log tree structure
+        console.log("Tree data:", JSON.stringify(treeData, null, 2).substring(0, 2000));
+        console.log("Root person:", treeData[0]?.name);
+        console.log("Marriages:", treeData[0]?.marriages?.length);
+
         if (treeData.length === 0) {
           setError("No family tree data to display. Add some people and relationships first.");
           setIsLoading(false);

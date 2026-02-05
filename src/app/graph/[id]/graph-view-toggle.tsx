@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import PersonList from "./person-list";
-import SimpleTreeView from "./simple-tree-view";
+import DTreeView from "./dtree-view";
 import type { Person, Relationship } from "@/types/database";
 
 type ViewMode = "tree" | "list";
@@ -50,7 +50,7 @@ export default function GraphViewToggle({
 
       {/* Views */}
       {view === "tree" ? (
-        <SimpleTreeView
+        <DTreeView
           persons={persons}
           relationships={relationships}
         />
