@@ -138,16 +138,28 @@ export default function DTreeView({
         const container = containerRef.current;
         container.innerHTML = "";
 
+        // Debug: log input data
+        console.log("Input persons:", persons?.length ?? 0);
+        console.log("Input relationships:", relationships?.length ?? 0);
+
+        if (!persons || persons.length === 0) {
+          setError("No persons data available.");
+          setIsLoading(false);
+          return;
+        }
+
         // Transform data
         const treeData = transformToDTreeData(persons, relationships);
 
         // Debug: log tree structure
-        console.log("Tree data:", JSON.stringify(treeData, null, 2).substring(0, 2000));
-        console.log("Root person:", treeData[0]?.name);
-        console.log("Marriages:", treeData[0]?.marriages?.length);
+        console.log("Tree data length:", treeData?.length ?? 0);
+        if (treeData && treeData.length > 0) {
+          console.log("Root person:", treeData[0]?.name);
+          console.log("Marriages:", treeData[0]?.marriages?.length ?? 0);
+        }
 
-        if (treeData.length === 0) {
-          setError("No family tree data to display. Add some people and relationships first.");
+        if (!treeData || treeData.length === 0) {
+          setError("No family tree data to display. Transform returned empty.");
           setIsLoading(false);
           return;
         }
@@ -215,8 +227,13 @@ export default function DTreeView({
         // Custom height separation
         const nodeHeightSeperation = () => 120;
 
+        // Verify data structure before passing to dTree
+        console.log("About to init dTree with:", JSON.stringify(treeData[0], null, 2).substring(0, 500));
+
         // Initialize dTree
-        const tree = window.dTree.init(treeData, {
+        let tree;
+        try {
+          tree = window.dTree.init(treeData, {
           target: `#${container.id}`,
           debug: false,
           width,
@@ -243,6 +260,12 @@ export default function DTreeView({
             },
           },
         });
+        } catch (dTreeError) {
+          console.error("dTree.init failed:", dTreeError);
+          setError(`dTree initialization failed: ${dTreeError instanceof Error ? dTreeError.message : String(dTreeError)}`);
+          setIsLoading(false);
+          return;
+        }
 
         treeInstanceRef.current = tree;
 
