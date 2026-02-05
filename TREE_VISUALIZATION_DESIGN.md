@@ -151,21 +151,33 @@ Consider adding a toggle to switch between display modes.
 
 ## Known Issues / TODO
 
-1. **Root selection** - Need to verify John McGinty is selected as root (not Margaret Kirk or someone else)
-2. **Debug logging** - Currently logs tree structure to console for verification
-3. **Card content** - Cards should show more info like the original format
-4. **Marriage visualization** - May need to enhance how couples are visually grouped (box around them, special styling)
-5. **Performance** - Not yet tested with full 214-person tree rendering
+### Critical: TreeDown Import Name Deduplication Bug
+The TreeDown importer (`import-treedown.ts`) deduplicates persons by exact display name. This causes problems when two people have the same name (e.g., "John McGinty" appears twice in the McGinty tree - once as the 1870 patriarch and once as a 1925 descendant). Both get merged into one person record with relationships from BOTH, creating incorrect parent-child links.
+
+**Impact**: John McGinty (1870) is incorrectly recorded as having parents Thomas Kirk McGinty and Helen O'Kane (who are actually his grandchildren's generation).
+
+**Workaround**: Root selection now prefers Margaret Kirk (John's wife) who IS a correct root with proper descendants.
+
+**Fix needed**: The importer should either:
+1. Preserve birth dates in the Person record and use them for disambiguation
+2. Append a disambiguator to duplicate names (e.g., "John McGinty (1870)", "John McGinty (1925)")
+3. Generate unique names based on lineage context
+
+### Other Issues
+1. **Birth dates not imported** - The TreeDown parser strips all parenthesized metadata including dates. The `ImportedPerson` interface only has `tempId` and `displayName`.
+2. **Card content** - Cards should show more info like the original format (dates, locations)
+3. **Marriage visualization** - May need to enhance how couples are visually grouped (box around them, special styling)
+4. **Performance** - Not yet tested with full 214-person tree rendering
 
 ## File Inventory
 
 ### Core Files
 - `src/app/graph/[id]/graph-view-toggle.tsx` - View mode switcher
-- `src/app/graph/[id]/dtree-view.tsx` - **ACTIVE** dTree-based view
-- `src/lib/dtree-transform.ts` - Transform for dTree format
+- `src/app/graph/[id]/simple-tree-view.tsx` - **ACTIVE** D3 tree with combined couples (working!)
+- `src/lib/dtree-transform.ts` - Transform functions (`transformToHierarchicalTree` for SimpleTreeView)
 
 ### Alternative Implementations (kept for reference)
-- `src/app/graph/[id]/simple-tree-view.tsx` - D3 tree with combined couples
+- `src/app/graph/[id]/dtree-view.tsx` - dTree-based view (had issues with data format)
 - `src/app/graph/[id]/family-chart-view.tsx` - family-chart attempt
 - `src/lib/family-chart-transform.ts` - family-chart transform
 
@@ -184,10 +196,10 @@ e57b9bf WIP: Add dTree and family-chart tree visualization experiments
 
 ## Next Steps
 
-1. **Test in browser** - Verify DTreeView renders correctly with John & Margaret at root
-2. **Enhance card display** - Show more info (dates, locations) matching original format
-3. **Improve couple visualization** - Add visual grouping (box, background) for married couples
-4. **Add view mode toggle** - Let users switch between separate/combined display
+1. ✅ **Root selection fixed** - Margaret Kirk & John McGinty now display as root (workaround for name dedup bug)
+2. **Fix TreeDown importer** - Add birth_date/death_date fields, preserve dates during import
+3. **Enhance card display** - Show more info (dates, locations) matching original format
+4. **Improve couple visualization** - Add visual grouping (box, background) for married couples
 5. **Performance testing** - Verify 214-person tree renders without issues
 6. **Remove debug logging** - Clean up console.log statements after verification
 
@@ -200,6 +212,8 @@ e57b9bf WIP: Add dTree and family-chart tree visualization experiments
 | Show parents as separate nodes | Maintains data model integrity, user can see individuals | 2024-02 |
 | Visual marriage connection | Indicates union without merging data | 2024-02 |
 | Keep SimpleTreeView as option | Some users may prefer combined-couple format | 2024-02 |
+| Use SimpleTreeView as primary | dTree library had data format issues (_sortMarriages error) | 2025-02-05 |
+| Reverse-alpha tiebreaker for roots | Workaround for name dedup bug - ensures Margaret Kirk selected over Helen O'Kane | 2025-02-05 |
 
 ## Contact / Context
 

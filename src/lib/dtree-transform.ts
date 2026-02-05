@@ -399,7 +399,7 @@ export function transformToHierarchicalTree(
     (p) => !childToParents.has(p.id) || childToParents.get(p.id)!.length === 0,
   );
 
-  // Pick best root (most descendants)
+  // Pick best root (most descendants, oldest birth date as tiebreaker)
   function countDescendants(personId: string, visited: Set<string>): number {
     if (visited.has(personId)) return 0;
     visited.add(personId);
@@ -409,6 +409,13 @@ export function transformToHierarchicalTree(
       count += countDescendants(childId, visited);
     }
     return count;
+  }
+
+  // Helper to get birth year as number (for sorting)
+  function getBirthYear(person: Person): number {
+    if (!person.birth_date) return 9999; // Unknown = sort last
+    const year = parseInt(person.birth_date.split("-")[0], 10);
+    return isNaN(year) ? 9999 : year;
   }
 
   let rootPerson: Person | null = null;
@@ -429,13 +436,51 @@ export function transformToHierarchicalTree(
     }
     rootPerson = persons.find((p) => p.id === bestId) ?? persons[0] ?? null;
   } else {
-    let bestDescendants = -1;
+    // Score each root: descendants count + bonus for earlier birth year
+    // This ensures the oldest ancestor with descendants becomes root
+    interface RootCandidate {
+      person: Person;
+      descendants: number;
+      birthYear: number;
+    }
+
+    const candidates: RootCandidate[] = [];
     for (const root of roots) {
       const descendants = countDescendants(root.id, new Set());
-      if (descendants > bestDescendants) {
-        bestDescendants = descendants;
-        rootPerson = root;
+      // Only consider roots that have descendants (parents)
+      if (descendants > 0) {
+        candidates.push({
+          person: root,
+          descendants,
+          birthYear: getBirthYear(root),
+        });
       }
+    }
+
+    if (candidates.length > 0) {
+      // Sort by: 1) descendants (desc), 2) birth year (asc - older first), 3) name reverse-alpha
+      // Note: Prefer names later in alphabet as a heuristic (surnames starting with M-Z)
+      candidates.sort((a, b) => {
+        // Primary: more descendants is better
+        if (b.descendants !== a.descendants) {
+          return b.descendants - a.descendants;
+        }
+        // Secondary: earlier birth year is better
+        if (a.birthYear !== b.birthYear) {
+          return a.birthYear - b.birthYear;
+        }
+        // Tertiary: reverse alphabetical (prefer M-Z over A-L as rough heuristic)
+        return b.person.display_name.localeCompare(a.person.display_name);
+      });
+
+      rootPerson = candidates[0].person;
+
+      // Log selected root for debugging (can be removed later)
+      console.log("Tree root selected:", rootPerson?.display_name);
+    } else {
+      // Fallback: pick the oldest person with no parents
+      roots.sort((a, b) => getBirthYear(a) - getBirthYear(b));
+      rootPerson = roots[0] ?? null;
     }
   }
 
