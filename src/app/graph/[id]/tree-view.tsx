@@ -50,7 +50,10 @@ export default function TreeView({
     setIsComputing(true);
 
     const timeoutId = setTimeout(() => {
+      console.log("[TreeView] Starting computation for", persons.length, "persons");
+
       const rootId = findRootPersonId(persons, relationships);
+      console.log("[TreeView] Root ID:", rootId);
       if (!rootId) {
         setTreeData(null);
         setIsComputing(false);
@@ -63,8 +66,12 @@ export default function TreeView({
       const filteredRels = relationships.filter(
         (r) => componentIds.has(r.person_a) && componentIds.has(r.person_b),
       );
+      console.log("[TreeView] Connected component:", filteredPersons.length, "persons,", filteredRels.length, "relationships");
 
+      console.log("[TreeView] Transforming to tree nodes...");
       const treeNodes = transformToTreeNodes(filteredPersons, filteredRels);
+      console.log("[TreeView] Tree nodes created:", treeNodes.length);
+
       if (treeNodes.length === 0) {
         setTreeData(null);
         setIsComputing(false);
@@ -72,9 +79,12 @@ export default function TreeView({
       }
 
       try {
+        console.log("[TreeView] Calling calcTree...");
         const result = calcTree(treeNodes, { rootId });
+        console.log("[TreeView] calcTree completed:", result.nodes.length, "nodes");
         setTreeData(result);
-      } catch {
+      } catch (err) {
+        console.error("[TreeView] calcTree error:", err);
         setTreeData(null);
       }
       setIsComputing(false);
