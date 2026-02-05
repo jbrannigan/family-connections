@@ -197,11 +197,12 @@ e57b9bf WIP: Add dTree and family-chart tree visualization experiments
 ## Next Steps
 
 1. ✅ **Root selection fixed** - Margaret Kirk & John McGinty now display as root (workaround for name dedup bug)
-2. **Fix TreeDown importer** - Add birth_date/death_date fields, preserve dates during import
-3. **Enhance card display** - Show more info (dates, locations) matching original format
-4. **Improve couple visualization** - Add visual grouping (box, background) for married couples
-5. **Performance testing** - Verify 214-person tree renders without issues
-6. **Remove debug logging** - Clean up console.log statements after verification
+2. ✅ **Fix TreeDown importer** - Added birth_date/death_date extraction and changed dedup key to name+birthYear
+3. **Re-import data** - Delete corrupted data and re-import with fixed importer
+4. **Enhance card display** - Show more info (dates, locations) matching original format
+5. **Improve couple visualization** - Add visual grouping (box, background) for married couples
+6. **Performance testing** - Verify 214-person tree renders without issues
+7. **Remove debug logging** - Clean up console.log statements after verification
 
 ## Design Decisions Log
 
@@ -214,6 +215,8 @@ e57b9bf WIP: Add dTree and family-chart tree visualization experiments
 | Keep SimpleTreeView as option | Some users may prefer combined-couple format | 2024-02 |
 | Use SimpleTreeView as primary | dTree library had data format issues (_sortMarriages error) | 2025-02-05 |
 | Reverse-alpha tiebreaker for roots | Workaround for name dedup bug - ensures Margaret Kirk selected over Helen O'Kane | 2025-02-05 |
+| Dedup by name+birthYear | Fixes merging of same-named people with different birth years | 2025-02-05 |
+| Extract dates during import | Preserves birth/death dates from TreeDown parenthesized metadata | 2025-02-05 |
 
 ## Contact / Context
 
