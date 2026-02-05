@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import PersonList from "./person-list";
+import GraphViewToggle from "./graph-view-toggle";
 
 export default async function GraphPage({
   params,
@@ -66,7 +66,7 @@ export default async function GraphPage({
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-12">
+      <main className="mx-auto px-6 py-12">
         <div className="mb-2 flex items-center gap-3">
           <Link
             href="/dashboard"
@@ -103,10 +103,10 @@ export default async function GraphPage({
           </div>
         </div>
 
-        <PersonList
+        <GraphViewToggle
           graphId={id}
-          initialPersons={persons ?? []}
-          initialRelationships={relationships ?? []}
+          persons={persons ?? []}
+          relationships={relationships ?? []}
           isAdmin={isAdmin}
         />
       </main>
