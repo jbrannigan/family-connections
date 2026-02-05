@@ -17,6 +17,8 @@ import type { RelationshipType } from "@/types/database";
 export interface ImportedPerson {
   tempId: string;
   displayName: string;
+  birthDate: string | null;
+  deathDate: string | null;
 }
 
 export interface ImportedRelationship {
@@ -41,8 +43,58 @@ interface TreeNode {
 interface ParsedLine {
   /** The primary person (first name on the line) */
   primaryName: string;
-  /** Spouses in order, with relationship type */
-  spouses: { name: string; type: RelationshipType }[];
+  /** Birth date extracted from metadata */
+  birthDate: string | null;
+  /** Death date extracted from metadata */
+  deathDate: string | null;
+  /** Spouses in order, with relationship type and dates */
+  spouses: { name: string; type: RelationshipType; birthDate: string | null; deathDate: string | null }[];
+}
+
+/**
+ * Extract birth and death dates from a text segment.
+ * Looks for patterns like: (1870-1909), (b. 1870), (1870), (1870-?)
+ * Returns { birthDate, deathDate } or nulls if not found.
+ */
+function extractDates(text: string): { birthDate: string | null; deathDate: string | null } {
+  let birthDate: string | null = null;
+  let deathDate: string | null = null;
+
+  // Pattern 1: (YYYY-YYYY) or (YYYY-?) for lifespan
+  const lifespanMatch = text.match(/\((\d{4})\s*-\s*(\d{4}|\?)\)/);
+  if (lifespanMatch) {
+    birthDate = lifespanMatch[1];
+    if (lifespanMatch[2] !== "?") {
+      deathDate = lifespanMatch[2];
+    }
+    return { birthDate, deathDate };
+  }
+
+  // Pattern 2: (b. YYYY) or (b YYYY) for birth only
+  const birthOnlyMatch = text.match(/\(b\.?\s*(\d{4})\)/i);
+  if (birthOnlyMatch) {
+    birthDate = birthOnlyMatch[1];
+    return { birthDate, deathDate };
+  }
+
+  // Pattern 3: Standalone (YYYY) - assume birth year
+  const standaloneYearMatch = text.match(/\((\d{4})\)(?!\s*-)/);
+  if (standaloneYearMatch) {
+    birthDate = standaloneYearMatch[1];
+    return { birthDate, deathDate };
+  }
+
+  // Pattern 4: "- stillborn" indicates death at birth
+  if (/stillborn/i.test(text)) {
+    // Try to find a birth year nearby
+    const yearMatch = text.match(/\((\d{4})/);
+    if (yearMatch) {
+      birthDate = yearMatch[1];
+      deathDate = yearMatch[1]; // Same year
+    }
+  }
+
+  return { birthDate, deathDate };
 }
 
 let nextId = 0;
@@ -212,13 +264,19 @@ function parseLine(raw: string): ParsedLine | null {
     const primaryName = stripMetadata(segments[0]);
     if (!primaryName || primaryName === "?") return null;
 
-    const spouses: { name: string; type: RelationshipType }[] = [];
+    // Extract dates for primary person
+    const primaryDates = extractDates(segments[0]);
+
+    const spouses: { name: string; type: RelationshipType; birthDate: string | null; deathDate: string | null }[] = [];
 
     for (let i = 1; i < segments.length; i++) {
       const rawSegment = segments[i];
       const cleanName = stripMetadata(rawSegment);
 
       if (!cleanName || cleanName === "?") continue;
+
+      // Extract dates for spouse
+      const spouseDates = extractDates(rawSegment);
 
       // Determine relationship type based on metadata in this segment
       // AND the text between this spouse and the next (or end of line)
@@ -232,38 +290,51 @@ function parseLine(raw: string): ParsedLine | null {
         relType = "ex_spouse";
       }
 
-      spouses.push({ name: cleanName, type: relType });
+      spouses.push({
+        name: cleanName,
+        type: relType,
+        birthDate: spouseDates.birthDate,
+        deathDate: spouseDates.deathDate,
+      });
     }
 
-    return { primaryName, spouses };
+    return { primaryName, birthDate: primaryDates.birthDate, deathDate: primaryDates.deathDate, spouses };
   }
 
   // Check for dash-separated union (simple single marriage)
   const dashPos = findTopLevelDash(raw);
   if (dashPos !== null) {
-    const primaryName = stripMetadata(raw.substring(0, dashPos - 1));
-    const spouseName = stripMetadata(raw.substring(dashPos + 2));
+    const primaryRaw = raw.substring(0, dashPos - 1);
+    const spouseRaw = raw.substring(dashPos + 2);
+    const primaryName = stripMetadata(primaryRaw);
+    const spouseName = stripMetadata(spouseRaw);
 
     if (!primaryName || primaryName === "?") return null;
 
-    const spouses: { name: string; type: RelationshipType }[] = [];
+    const primaryDates = extractDates(primaryRaw);
+    const spouses: { name: string; type: RelationshipType; birthDate: string | null; deathDate: string | null }[] = [];
+
     if (spouseName && spouseName !== "?") {
+      const spouseDates = extractDates(spouseRaw);
       // Check if divorced
       const isDivorced = hasDivorceIndicator(raw);
       spouses.push({
         name: spouseName,
         type: isDivorced ? "ex_spouse" : "spouse",
+        birthDate: spouseDates.birthDate,
+        deathDate: spouseDates.deathDate,
       });
     }
 
-    return { primaryName, spouses };
+    return { primaryName, birthDate: primaryDates.birthDate, deathDate: primaryDates.deathDate, spouses };
   }
 
   // Single person (no union)
   const name = stripMetadata(raw);
   if (!name || name === "?") return null;
 
-  return { primaryName: name, spouses: [] };
+  const dates = extractDates(raw);
+  return { primaryName: name, birthDate: dates.birthDate, deathDate: dates.deathDate, spouses: [] };
 }
 
 /**
@@ -309,17 +380,26 @@ export function importTreeDown(text: string): TreeDownImportResult {
     stack.push(node);
   }
 
-  function getOrCreatePerson(name: string): string {
+  function getOrCreatePerson(
+    name: string,
+    birthDate: string | null,
+    deathDate: string | null,
+  ): string {
     const clean = name.trim();
     if (!clean) return tempId();
 
-    // Check if we already have this exact name
-    const existing = nameToId.get(clean);
+    // Create a unique key using name + birth year (if available)
+    // This prevents merging people with the same name but different birth years
+    const birthYear = birthDate || "unknown";
+    const uniqueKey = `${clean}|${birthYear}`;
+
+    // Check if we already have this exact name+birthYear combination
+    const existing = nameToId.get(uniqueKey);
     if (existing) return existing;
 
     const id = tempId();
-    persons.push({ tempId: id, displayName: clean });
-    nameToId.set(clean, id);
+    persons.push({ tempId: id, displayName: clean, birthDate, deathDate });
+    nameToId.set(uniqueKey, id);
     return id;
   }
 
@@ -332,7 +412,7 @@ export function importTreeDown(text: string): TreeDownImportResult {
       return;
     }
 
-    const primaryId = getOrCreatePerson(parsed.primaryName);
+    const primaryId = getOrCreatePerson(parsed.primaryName, parsed.birthDate, parsed.deathDate);
 
     // Connect primary person to parents (biological child)
     for (const pid of parentIds) {
@@ -346,7 +426,7 @@ export function importTreeDown(text: string): TreeDownImportResult {
     // Create spouse relationships
     const spouseIds: string[] = [];
     for (const spouse of parsed.spouses) {
-      const spouseId = getOrCreatePerson(spouse.name);
+      const spouseId = getOrCreatePerson(spouse.name, spouse.birthDate, spouse.deathDate);
       spouseIds.push(spouseId);
 
       relationships.push({

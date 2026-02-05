@@ -72,6 +72,8 @@ export default function ImportForm({ graphId }: { graphId: string }) {
           .insert({
             graph_id: graphId,
             display_name: person.displayName,
+            birth_date: person.birthDate,
+            death_date: person.deathDate,
             created_by: user.id,
           })
           .select("id")
@@ -186,14 +188,24 @@ export default function ImportForm({ graphId }: { graphId: string }) {
               People ({preview.persons.length})
             </h3>
             <div className="flex flex-wrap gap-2">
-              {preview.persons.map((p) => (
-                <span
-                  key={p.tempId}
-                  className="rounded-lg bg-white/10 px-3 py-1.5 text-sm"
-                >
-                  {p.displayName}
-                </span>
-              ))}
+              {preview.persons.map((p) => {
+                const dateStr = p.birthDate
+                  ? p.deathDate
+                    ? `(${p.birthDate}-${p.deathDate})`
+                    : `(b. ${p.birthDate})`
+                  : "";
+                return (
+                  <span
+                    key={p.tempId}
+                    className="rounded-lg bg-white/10 px-3 py-1.5 text-sm"
+                  >
+                    {p.displayName}
+                    {dateStr && (
+                      <span className="ml-1 text-[#7fdb9a]/70">{dateStr}</span>
+                    )}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
