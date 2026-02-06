@@ -7,6 +7,23 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-02-06
+
+### Fixed
+- TreeDown parser: `stripMetadata()` no longer strips closing parens from nicknames like `(Peggy)` (PR #2)
+- TreeDown parser: `addSurname()` now places surname after nickname — `Katherine (Kate) McGinty` not `Katherine McGinty (Kate)` (PR #2)
+
+### Removed
+- Unused tree visualization packages: `d3-dtree`, `family-chart`, `relatives-tree`, `topola` (PR #3)
+- Dead code: `dtree-view.tsx`, `tree-view.tsx`, `family-chart-view.tsx`, `tree-transform.ts`, `family-chart-transform.ts` (~2,800 lines) (PR #3)
+
+### Added
+- Engineering workflow: feature docs, branching model, CI with tests, versioning conventions (PR #1)
+- Vitest + React Testing Library for unit/integration tests (PR #1)
+- Playwright for E2E tests (PR #1)
+- 12 unit tests for TreeDown parser (PR #1, #2)
+- Feature doc template at `docs/features/_TEMPLATE.md` (PR #1)
+
 ## [0.1.0] - 2025-02-05
 
 ### Added
