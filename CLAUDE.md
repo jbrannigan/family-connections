@@ -108,13 +108,13 @@ Dates support reduced precision per ISO 8601:
 - Year and month: `"1958-03"`
 - Full date: `"1958-03-15"`
 
-Database columns are `text` type. The `normalizeDate()` function in `import-form.tsx` validates format.
+Database columns are `text` type. The `normalizeDate()` function in `src/lib/date-utils.ts` validates format.
 
 ## Current Test Data
 
 The "Brannigan Family" graph (ID: `6c7ef05c-71e7-4a05-bb36-bd31f1040528`) contains 241 people and 403 relationships imported from the McGinty family tree. This is a real 5+ generation Irish-American family tree with multiple marriages, divorces, nicknames, etc.
 
-Test user: `jim@brnngn.com` (admin of the graph)
+Test user: `jim.brannigan@gmail.com` (admin of the graph)
 
 ## Dev Commands
 
@@ -182,6 +182,7 @@ Before writing code, create a feature doc in `docs/features/`:
 - PR body: reference the feature doc, summarize changes, include test plan
 - **Claude must prompt the user to review and approve the PR before merging**
 - CI must pass (lint + typecheck + build + tests)
+- **Always update the repo `README.md`** to reflect any user-facing changes in the PR
 
 #### Step 6: Merge & Version
 - Squash-merge to `main` (keeps history clean)
