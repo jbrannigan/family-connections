@@ -51,6 +51,7 @@ export default function GraphViewToggle({
       {/* Views */}
       {view === "tree" ? (
         <SimpleTreeView
+          graphId={graphId}
           persons={persons}
           relationships={relationships}
         />
