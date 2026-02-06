@@ -10,6 +10,26 @@ import {
 
 type ImportStep = "input" | "preview" | "importing" | "done";
 
+/**
+ * Normalize a date string for database storage.
+ * Supports ISO 8601 reduced precision:
+ * - "1958" → "1958" (year only)
+ * - "1958-03" → "1958-03" (year and month)
+ * - "1958-03-15" → "1958-03-15" (full date)
+ * Returns null if input is null or invalid.
+ */
+function normalizeDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const trimmed = dateStr.trim();
+  // Year only: "1958"
+  if (/^\d{4}$/.test(trimmed)) return trimmed;
+  // Year and month: "1958-03"
+  if (/^\d{4}-\d{2}$/.test(trimmed)) return trimmed;
+  // Full date: "1958-03-15"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  return null;
+}
+
 export default function ImportForm({ graphId }: { graphId: string }) {
   const [text, setText] = useState("");
   const [step, setStep] = useState<ImportStep>("input");
@@ -72,8 +92,8 @@ export default function ImportForm({ graphId }: { graphId: string }) {
           .insert({
             graph_id: graphId,
             display_name: person.displayName,
-            birth_date: person.birthDate,
-            death_date: person.deathDate,
+            birth_date: normalizeDate(person.birthDate),
+            death_date: normalizeDate(person.deathDate),
             created_by: user.id,
           })
           .select("id")

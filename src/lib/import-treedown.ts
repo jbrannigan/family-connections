@@ -338,6 +338,116 @@ function parseLine(raw: string): ParsedLine | null {
 }
 
 /**
+ * Common female first names for gender inference.
+ * Used to determine if children should take spouse's surname.
+ */
+const FEMALE_NAMES = new Set([
+  "mary", "margaret", "peggy", "anne", "anna", "ann", "eileen", "helen",
+  "catherine", "kate", "cathy", "kathy", "elizabeth", "betty", "dorothy",
+  "dot", "loreen", "carol", "alice", "monica", "jean", "nancy", "sally",
+  "barbara", "theresa", "teresa", "fran", "frances", "sharon", "charlene",
+  "regina", "gina", "maureen", "jo", "joanne", "kim", "lisa", "juliet",
+  "bridget", "caitlin", "karen", "kelly", "megan", "maggie", "paige",
+  "jessica", "sydney", "sarah", "emily", "abby", "madeline", "madeleine",
+  "alanna", "lily", "olivia", "nicole", "kierston", "hanna", "kacie",
+  "anya", "christine", "heather", "tiffany", "alison", "kathleen", "rachel",
+  "melody", "alyssa", "katrina", "marissa", "valerie", "kiersten", "angela",
+  "colleen", "samantha", "trish", "deirdre", "felicia", "michelle", "laurie",
+  "kristin", "ashley", "kristie", "rose", "susan", "linda", "robin", "ellen",
+  "leslie", "laura", "denise", "arlene", "joanne", "reece", "katie", "julie",
+]);
+
+/**
+ * Common male first names for gender inference.
+ */
+const MALE_NAMES = new Set([
+  "john", "james", "jim", "thomas", "tom", "joseph", "joe", "michael",
+  "william", "bill", "robert", "bob", "charles", "chuck", "george",
+  "edward", "ed", "richard", "dick", "frank", "paul", "peter", "stephen",
+  "steve", "mark", "david", "daniel", "dan", "patrick", "sean", "kevin",
+  "timothy", "tim", "gerald", "gerry", "dennis", "martin", "marty",
+  "lawrence", "larry", "gary", "douglas", "doug", "glenn", "steven",
+  "andrew", "christopher", "chris", "nicholas", "nick", "ryan", "kyle",
+  "matthew", "matt", "brian", "bryan", "justin", "jacob", "ian", "alec",
+  "connor", "nolan", "broderick", "samuel", "sam", "scott", "lee", "julian",
+  "aaron", "eric", "toby", "christian", "cameron", "ron", "brenton",
+  "tyler", "kenneth", "simon", "navid", "brett", "gerard",
+]);
+
+/**
+ * Infer gender from a first name.
+ * Returns "male", "female", or null if unknown.
+ */
+function inferGender(fullName: string): "male" | "female" | null {
+  // Extract first name (before any nickname or surname)
+  const withoutNicknames = fullName.replace(/\s*\([^)]+\)\s*/g, " ").trim();
+  const parts = withoutNicknames.split(/\s+/);
+  if (parts.length === 0) return null;
+
+  const firstName = parts[0].toLowerCase();
+
+  if (FEMALE_NAMES.has(firstName)) return "female";
+  if (MALE_NAMES.has(firstName)) return "male";
+
+  return null;
+}
+
+/**
+ * Extract surname from a full name.
+ * Handles nicknames in parentheses: "Margaret (Peggy) McGinty" → "McGinty"
+ * Returns null if no surname found (single word name).
+ */
+function extractSurname(fullName: string): string | null {
+  // Remove nicknames in parentheses for surname extraction
+  const withoutNicknames = fullName.replace(/\s*\([^)]+\)\s*/g, " ").trim();
+  const parts = withoutNicknames.split(/\s+/);
+
+  // If only one word, no surname to extract
+  if (parts.length < 2) return null;
+
+  // Last word is the surname
+  return parts[parts.length - 1];
+}
+
+/**
+ * Check if a name appears to be a first-name-only (no surname).
+ * Returns true for: "John", "Mary", "James III", "John Daniel"
+ * Returns false for: "John McGinty", "Margaret (Peggy) McGinty"
+ */
+function isFirstNameOnly(name: string): boolean {
+  // Remove nicknames for analysis
+  const withoutNicknames = name.replace(/\s*\([^)]+\)\s*/g, " ").trim();
+  const parts = withoutNicknames.split(/\s+/);
+
+  // Single word is definitely first name only
+  if (parts.length === 1) return true;
+
+  // Two words where second is a suffix (Jr, II, III, IV) is first name only
+  if (parts.length === 2) {
+    const suffixes = ["Jr", "Jr.", "II", "III", "IV", "V"];
+    if (suffixes.includes(parts[1])) return true;
+  }
+
+  // Two common first names together (like "Mary Eileen", "John Daniel") - harder to detect
+  // For now, assume 2+ words means it has a surname unless it's a suffix
+  return false;
+}
+
+/**
+ * Add surname to a first-name-only name.
+ * Preserves nicknames: "Margaret (Peggy)" + "McGinty" → "Margaret (Peggy) McGinty"
+ */
+function addSurname(firstName: string, surname: string): string {
+  // Check if there's a nickname at the end
+  const nicknameMatch = firstName.match(/^(.+?)(\s*\([^)]+\))$/);
+  if (nicknameMatch) {
+    // Insert surname before nickname
+    return `${nicknameMatch[1].trim()} ${surname}${nicknameMatch[2]}`;
+  }
+  return `${firstName} ${surname}`;
+}
+
+/**
  * Parse TreeDown text into persons and relationships.
  */
 export function importTreeDown(text: string): TreeDownImportResult {
@@ -404,7 +514,8 @@ export function importTreeDown(text: string): TreeDownImportResult {
   }
 
   // Process nodes recursively
-  function processNode(node: TreeNode, parentIds: string[]) {
+  // inheritedSurname: surname to apply to children who only have first names
+  function processNode(node: TreeNode, parentIds: string[], inheritedSurname: string | null) {
     const parsed = parseLine(node.raw);
 
     if (!parsed) {
@@ -412,7 +523,16 @@ export function importTreeDown(text: string): TreeDownImportResult {
       return;
     }
 
-    const primaryId = getOrCreatePerson(parsed.primaryName, parsed.birthDate, parsed.deathDate);
+    // Apply inherited surname if this person only has a first name
+    let primaryName = parsed.primaryName;
+    if (inheritedSurname && isFirstNameOnly(primaryName)) {
+      primaryName = addSurname(primaryName, inheritedSurname);
+    }
+
+    // Extract surname from this person to pass to their children
+    const primarySurname = extractSurname(primaryName) || inheritedSurname;
+
+    const primaryId = getOrCreatePerson(primaryName, parsed.birthDate, parsed.deathDate);
 
     // Connect primary person to parents (biological child)
     for (const pid of parentIds) {
@@ -423,11 +543,22 @@ export function importTreeDown(text: string): TreeDownImportResult {
       });
     }
 
-    // Create spouse relationships
+    // Create spouse relationships and track the last spouse's surname
     const spouseIds: string[] = [];
+    let lastSpouseSurname: string | null = null;
     for (const spouse of parsed.spouses) {
+      // Spouses keep their own names (don't inherit surname)
       const spouseId = getOrCreatePerson(spouse.name, spouse.birthDate, spouse.deathDate);
       spouseIds.push(spouseId);
+
+      // Track the last (current) spouse's surname for children
+      // Only use non-divorced spouses for surname inheritance
+      if (spouse.type === "spouse" || spouse.type === "partner") {
+        const spouseSurname = extractSurname(spouse.name);
+        if (spouseSurname) {
+          lastSpouseSurname = spouseSurname;
+        }
+      }
 
       relationships.push({
         parentTempId: primaryId,
@@ -447,13 +578,55 @@ export function importTreeDown(text: string): TreeDownImportResult {
       ? [primaryId, lastSpouseId]
       : [primaryId];
 
+    // Determine surname for children:
+    // In Western naming conventions, children typically take the father's surname.
+    // We infer gender from first names to determine which parent's surname to use.
+    //
+    // Cases:
+    // 1. "John McGinty & Mary Fousek" → John is male, children get McGinty
+    // 2. "Peggy McGinty & James Brannigan" → Peggy is female, James is male, children get Brannigan
+    // 3. Unknown gender → fall back to inherited surname logic
+    let childSurname: string | null;
+
+    const primaryGender = inferGender(primaryName);
+    const lastSpouse = parsed.spouses.length > 0 ? parsed.spouses[parsed.spouses.length - 1] : null;
+    const spouseGender = lastSpouse ? inferGender(lastSpouse.name) : null;
+
+    if (primaryGender === "male" && primarySurname) {
+      // Primary is male - children get primary's surname
+      // e.g., John McGinty & Mary Fousek → children are McGinty
+      childSurname = primarySurname;
+    } else if (primaryGender === "female" && lastSpouseSurname) {
+      // Primary is female with a spouse - children get spouse's surname
+      // e.g., Peggy McGinty & James Brannigan → children are Brannigan
+      childSurname = lastSpouseSurname;
+    } else if (spouseGender === "male" && lastSpouseSurname) {
+      // Spouse is male - children get spouse's surname
+      childSurname = lastSpouseSurname;
+    } else if (spouseGender === "female" && primarySurname) {
+      // Spouse is female - children get primary's surname
+      childSurname = primarySurname;
+    } else if (primarySurname && primarySurname === inheritedSurname) {
+      // Unknown genders, but primary matches inherited - assume line continuation
+      childSurname = primarySurname;
+    } else if (lastSpouseSurname) {
+      // Unknown genders, use spouse's surname
+      childSurname = lastSpouseSurname;
+    } else if (primarySurname) {
+      // No spouse surname, use primary's
+      childSurname = primarySurname;
+    } else {
+      // Fall back to inherited
+      childSurname = inheritedSurname;
+    }
+
     for (const child of node.children) {
-      processNode(child, childParents);
+      processNode(child, childParents, childSurname);
     }
   }
 
   for (const rootNode of nodes) {
-    processNode(rootNode, []);
+    processNode(rootNode, [], null);
   }
 
   if (persons.length === 0) {

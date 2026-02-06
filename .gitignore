@@ -40,3 +40,32 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# temporary/working files
+*.html
+*.svg
+*.docx
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!.prettierrc.json
+*.txt
+!README.txt
+
+# mockups and design files
+/mockups/
+
+# supabase temp
+/supabase/.temp/
+
+# local data files
+/data/
+
+# claude session files
+/using*.md
+
+# IDE
+.idea/
+*.swp
+*.swo

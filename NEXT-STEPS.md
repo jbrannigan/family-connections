@@ -1,0 +1,149 @@
+# Next Steps - Family Connections Roadmap
+
+## Completed (Feb 2025)
+
+### Core Features
+- [x] User authentication (Supabase Auth with password)
+- [x] Family graph creation and membership
+- [x] Person and relationship management
+- [x] TreeDown import with bulk insert
+- [x] Tree visualization (SimpleTreeView with couple nodes)
+- [x] List view with person cards
+
+### Recent Fixes (Session 2025-02-05)
+- [x] **Gender inference for surname inheritance** - Children now correctly inherit surnames based on parent genders (e.g., Peggy McGinty & James Brannigan → children are Brannigans)
+- [x] **ISO 8601 reduced precision dates** - Dates now store only what's known (year-only "1958" instead of "1958-01-01")
+- [x] **Database migration** - Changed date columns from `date` to `text` type
+
+---
+
+## Priority 1: Essential Improvements
+
+### Person Detail/Edit Page
+- [ ] Dedicated page for viewing/editing person details
+- [ ] Edit display name, pronouns, dates, notes
+- [ ] View all relationships for a person
+- [ ] Add/remove relationships from person page
+
+### Search & Navigation
+- [ ] Search box in tree/list views
+- [ ] Jump to person in tree
+- [ ] Keyboard navigation (arrow keys in tree)
+- [ ] Breadcrumb showing path from root
+
+### Data Validation
+- [ ] Validate date formats on input
+- [ ] Warn about circular relationships
+- [ ] Detect and merge duplicate persons
+- [ ] Undo/redo for edits
+
+---
+
+## Priority 2: User Experience
+
+### Graph Settings
+- [ ] Rename graph
+- [ ] Change owner
+- [ ] Manage members (invite, remove, change roles)
+- [ ] Delete graph (with confirmation)
+
+### Profile Management
+- [ ] Edit user display name
+- [ ] Upload avatar
+- [ ] View graphs user belongs to
+
+### Mobile Responsiveness
+- [ ] Touch-friendly tree navigation
+- [ ] Responsive list view
+- [ ] Mobile menu improvements
+
+---
+
+## Priority 3: Advanced Features
+
+### Stories Feature (DB exists, UI needed)
+- [ ] Add stories to persons
+- [ ] Fun facts toggle
+- [ ] Story display in person detail
+- [ ] Story timeline view
+
+### Export & Sharing
+- [ ] Export tree as PNG/SVG image
+- [ ] Export to GEDCOM format
+- [ ] Share read-only link
+- [ ] Print-friendly view
+
+### QR Code Check-in (Reunion Feature)
+- [ ] Generate QR code for graph
+- [ ] Check-in page for scanning
+- [ ] Track who's attended
+- [ ] Display check-in status on person cards
+
+---
+
+## Priority 4: Future Enhancements
+
+### Advanced Tree Visualization
+- [ ] Horizontal layout option
+- [ ] Collapse/expand subtrees
+- [ ] Highlight search results
+- [ ] Different color themes
+
+### Collaboration
+- [ ] Real-time updates (Supabase Realtime)
+- [ ] Edit history/audit log
+- [ ] Comments on persons
+- [ ] Change approval workflow
+
+### Import/Export
+- [ ] Import from GEDCOM
+- [ ] Import from Ancestry/FamilySearch
+- [ ] Bulk edit via CSV
+
+---
+
+## Technical Debt
+
+### Performance
+- [ ] Virtualize large person lists
+- [ ] Lazy load tree branches
+- [ ] Optimize relationship queries
+
+### Testing
+- [ ] Unit tests for TreeDown parser
+- [ ] E2E tests for critical flows
+- [ ] Visual regression tests for tree
+
+### Documentation
+- [x] CLAUDE.md - AI assistant context
+- [x] SETUP.md - Installation guide
+- [x] NEXT-STEPS.md - Roadmap (this file)
+- [ ] API documentation
+- [ ] User guide
+
+---
+
+## Notes for Contributors
+
+### Code Style
+- TypeScript strict mode
+- Functional components with hooks
+- Server components where possible (Next.js App Router)
+- Tailwind CSS for styling
+
+### Database Changes
+1. Create migration in `supabase/migrations/`
+2. Run migration in Supabase SQL Editor
+3. Update TypeScript types in `src/types/database.ts`
+4. Update CLAUDE.md schema section
+
+### Adding New Features
+1. Check this roadmap for related items
+2. Create feature branch
+3. Implement with tests if possible
+4. Update documentation
+5. Submit PR with description
+
+---
+
+*Last updated: 2025-02-05*

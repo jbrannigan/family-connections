@@ -48,6 +48,13 @@ export default function SimpleTreeView({
           await loadScript(
             "https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js",
           );
+          // Wait a tick for D3 to initialize
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        const d3 = (window as any).d3;
+        if (!d3 || !d3.hierarchy) {
+          throw new Error("D3 library failed to load properly. Please refresh the page.");
         }
 
         if (!mounted) return;
@@ -76,8 +83,6 @@ export default function SimpleTreeView({
         // Clear container
         const container = containerRef.current;
         container.innerHTML = "";
-
-        const d3 = (window as any).d3;
 
         // Create hierarchy
         const root = d3.hierarchy(rootData);
