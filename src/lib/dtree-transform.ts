@@ -510,7 +510,7 @@ export function transformToHierarchicalTree(
     // Build the node name (person + spouse if any)
     let nodeName = formatPersonName(person);
     const spouseRel = personSpouse.get(personId);
-    let childrenSourceIds: string[] = [personId];
+    const childrenSourceIds: string[] = [personId];
 
     if (spouseRel && !processedPersons.has(spouseRel.spouseId)) {
       const spouse = personMap.get(spouseRel.spouseId);
