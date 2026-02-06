@@ -16,6 +16,7 @@ import type { Person, Relationship } from "@/types/database";
 export interface TreeDisplayNode {
   id: string;
   name: string;
+  personIds: string[]; // UUIDs of the 1 or 2 persons represented by this node
   children: TreeDisplayNode[];
 }
 
@@ -545,6 +546,7 @@ export function transformToHierarchicalTree(
     return {
       id: nodeId,
       name: nodeName,
+      personIds: childrenSourceIds,
       children: childNodes,
     };
   }

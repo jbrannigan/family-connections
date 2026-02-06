@@ -7,28 +7,9 @@ import {
   importTreeDown,
   type TreeDownImportResult,
 } from "@/lib/import-treedown";
+import { normalizeDate } from "@/lib/date-utils";
 
 type ImportStep = "input" | "preview" | "importing" | "done";
-
-/**
- * Normalize a date string for database storage.
- * Supports ISO 8601 reduced precision:
- * - "1958" → "1958" (year only)
- * - "1958-03" → "1958-03" (year and month)
- * - "1958-03-15" → "1958-03-15" (full date)
- * Returns null if input is null or invalid.
- */
-function normalizeDate(dateStr: string | null): string | null {
-  if (!dateStr) return null;
-  const trimmed = dateStr.trim();
-  // Year only: "1958"
-  if (/^\d{4}$/.test(trimmed)) return trimmed;
-  // Year and month: "1958-03"
-  if (/^\d{4}-\d{2}$/.test(trimmed)) return trimmed;
-  // Full date: "1958-03-15"
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  return null;
-}
 
 export default function ImportForm({ graphId }: { graphId: string }) {
   const [text, setText] = useState("");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Person, Relationship, RelationshipType } from "@/types/database";
 
 const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
@@ -167,6 +168,7 @@ export default function PersonList({
         const other = persons.find((p) => p.id === otherId);
         return {
           type: r.type as RelationshipType,
+          otherId,
           otherName: other?.display_name ?? "Unknown",
           isA,
         };
@@ -262,9 +264,12 @@ export default function PersonList({
                 className="rounded-2xl border border-white/10 bg-white/5 p-5 transition hover:border-[#7fdb9a]/20"
               >
                 <div className="mb-1 flex items-start justify-between">
-                  <h3 className="text-lg font-semibold">
+                  <Link
+                    href={`/graph/${graphId}/person/${person.id}`}
+                    className="text-lg font-semibold transition hover:text-[#7fdb9a]"
+                  >
                     {person.display_name}
-                  </h3>
+                  </Link>
                   {person.is_incomplete && (
                     <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400">
                       incomplete
@@ -290,7 +295,12 @@ export default function PersonList({
                         <span className="text-[#7fdb9a]">
                           {getDirectionalLabel(rel.type, rel.isA)}
                         </span>{" "}
-                        {rel.otherName}
+                        <Link
+                          href={`/graph/${graphId}/person/${rel.otherId}`}
+                          className="transition hover:text-white/80"
+                        >
+                          {rel.otherName}
+                        </Link>
                       </p>
                     ))}
                   </div>

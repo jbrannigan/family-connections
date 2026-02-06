@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Person, Relationship } from "@/types/database";
 import {
   transformToHierarchicalTree,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/dtree-transform";
 
 interface SimpleTreeViewProps {
+  graphId: string;
   persons: Person[];
   relationships: Relationship[];
 }
@@ -25,9 +27,11 @@ const NODE_H_SPACING = 40;
 const NODE_V_SPACING = 80;
 
 export default function SimpleTreeView({
+  graphId,
   persons,
   relationships,
 }: SimpleTreeViewProps) {
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -209,10 +213,12 @@ export default function SimpleTreeView({
             .attr("stroke", "#7fdb9a");
         });
 
-        // Click to show full name in console (could be expanded to info panel)
+        // Click to navigate to person detail page
         nodes.on("click", (_event: unknown, d: unknown) => {
           const node = d as { data: TreeDisplayNode };
-          console.log("Selected:", node.data.name);
+          if (node.data.personIds && node.data.personIds.length > 0) {
+            router.push(`/graph/${graphId}/person/${node.data.personIds[0]}`);
+          }
         });
 
         setIsLoading(false);
@@ -230,7 +236,7 @@ export default function SimpleTreeView({
     return () => {
       mounted = false;
     };
-  }, [persons, relationships]);
+  }, [persons, relationships, graphId, router]);
 
   return (
     <div className="relative w-full h-full min-h-[600px] bg-[#0a1410]">
