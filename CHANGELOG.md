@@ -7,6 +7,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-06
+
+### Added
+- **Person detail/edit page** at `/graph/[id]/person/[personId]` — view and edit any person's info (PR #4)
+- View mode: displays name, pronouns, dates, birth location, notes, relationships (grouped by type), and stories
+- Edit mode (admin-only): inline form with date validation, save/cancel
+- Relationship grouping: parents, spouses, children with type labels and links to related persons
+- Tree view click navigation: clicking a person node navigates to their detail page
+- List view links: person names and relationship names are now clickable links to person pages
+- Shared date utilities (`date-utils.ts`): `normalizeDate()`, `isValidDate()`, `formatDateForDisplay()`
+- 16 unit tests for date utilities
+
 ## [0.1.1] - 2026-02-06
 
 ### Fixed
