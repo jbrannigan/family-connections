@@ -17,14 +17,10 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.94.0",
-    "d3-dtree": "^2.4.1",
-    "family-chart": "^0.9.0",
     "next": "16.1.6",
     "qrcode": "^1.5.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "relatives-tree": "^3.2.2",
-    "topola": "^3.8.1"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
