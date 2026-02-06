@@ -63,9 +63,33 @@ describe("importTreeDown", () => {
     expect(spouseRels.length).toBeGreaterThanOrEqual(2);
   });
 
-  // BUG: Nickname parentheses are not preserved correctly by stripMetadata.
-  // The closing paren of (Peggy) gets stripped. This should be fixed.
-  it.todo("preserves nicknames in parentheses — KNOWN BUG");
+  it("preserves nicknames in parentheses", () => {
+    const result = importTreeDown(
+      "Margaret (Peggy) McGinty (1933-2024) & James Brannigan (1932-2004)",
+    );
+    const peggy = result.persons.find((p) =>
+      p.displayName.includes("Peggy"),
+    );
+    expect(peggy).toBeDefined();
+    expect(peggy!.displayName).toBe("Margaret (Peggy) McGinty");
+    expect(peggy!.birthDate).toBe("1933");
+    expect(peggy!.deathDate).toBe("2024");
+  });
+
+  it("preserves nicknames for children with surname inheritance", () => {
+    const input = [
+      "John McGinty (1870-1909) & Margaret Kirk",
+      "\tKatherine (Kate)",
+    ].join("\n");
+
+    const result = importTreeDown(input);
+    const kate = result.persons.find((p) =>
+      p.displayName.includes("Kate"),
+    );
+    expect(kate).toBeDefined();
+    // Should inherit McGinty surname and keep nickname
+    expect(kate!.displayName).toBe("Katherine (Kate) McGinty");
+  });
 
   it("deduplicates people by name + birth year", () => {
     const input = [

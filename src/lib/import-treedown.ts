@@ -159,9 +159,27 @@ function stripMetadata(text: string): string {
     }
   }
 
-  // Clean up stray closing parens, commas, trailing years, question marks
-  result = result
-    .replace(/\)/g, "") // stray closing parens
+  // Remove stray (unbalanced) closing parens while preserving balanced groups like nicknames.
+  // Walk the string tracking paren depth; only keep ')' that has a matching '('.
+  let cleaned = "";
+  let depth = 0;
+  for (const ch of result) {
+    if (ch === "(") {
+      depth++;
+      cleaned += ch;
+    } else if (ch === ")") {
+      if (depth > 0) {
+        depth--;
+        cleaned += ch;
+      }
+      // else: stray closing paren, skip it
+    } else {
+      cleaned += ch;
+    }
+  }
+
+  // Clean up commas, trailing years, question marks, etc.
+  cleaned = cleaned
     .replace(/\s*,\s*/g, " ") // remove commas (leftover from metadata removal)
     .replace(/\s+\d{4}\s*$/, "") // trailing bare year like "Fran Adams 1945"
     .replace(/\s*\?\s*$/, "") // trailing question mark
@@ -169,7 +187,7 @@ function stripMetadata(text: string): string {
     .replace(/\s{2,}/g, " ") // collapse spaces
     .trim();
 
-  return result;
+  return cleaned;
 }
 
 /**
@@ -438,11 +456,11 @@ function isFirstNameOnly(name: string): boolean {
  * Preserves nicknames: "Margaret (Peggy)" + "McGinty" → "Margaret (Peggy) McGinty"
  */
 function addSurname(firstName: string, surname: string): string {
-  // Check if there's a nickname at the end
+  // Check if there's a nickname at the end: "Katherine (Kate)" → "Katherine (Kate) McGinty"
   const nicknameMatch = firstName.match(/^(.+?)(\s*\([^)]+\))$/);
   if (nicknameMatch) {
-    // Insert surname before nickname
-    return `${nicknameMatch[1].trim()} ${surname}${nicknameMatch[2]}`;
+    // Append surname after nickname
+    return `${nicknameMatch[1].trim()}${nicknameMatch[2]} ${surname}`;
   }
   return `${firstName} ${surname}`;
 }
