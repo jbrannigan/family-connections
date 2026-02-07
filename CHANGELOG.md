@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-07
+
+### Added
+- **Search & Navigation** — find anyone instantly across 241+ family members (PR #5)
+- Search input with magnifying glass icon, clear button, and `⌘K` / `Ctrl+K` keyboard shortcut
+- **Tree view**: dropdown shows matching persons with highlighted text; click to animated pan+zoom to node with brief highlight flash
+- **List view**: real-time card filtering with green match highlighting and "X of Y persons" result count
+- "No persons found" empty state with search query shown
+- Search state persists when switching between tree and list views
+- `Escape` key clears search and blurs input
+- Pure `searchPersons()` utility with case-insensitive substring matching, match ranges for highlighting, and prefix-match priority sorting
+- 10 unit tests for search utility
+
 ## [0.2.0] - 2026-02-06
 
 ### Added

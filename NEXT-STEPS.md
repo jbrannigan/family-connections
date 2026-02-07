@@ -19,15 +19,16 @@
 
 ## Priority 1: Essential Improvements
 
-### Person Detail/Edit Page
-- [ ] Dedicated page for viewing/editing person details
-- [ ] Edit display name, pronouns, dates, notes
-- [ ] View all relationships for a person
+### Person Detail/Edit Page ✅ (v0.2.0)
+- [x] Dedicated page for viewing/editing person details
+- [x] Edit display name, pronouns, dates, notes
+- [x] View all relationships for a person
 - [ ] Add/remove relationships from person page
 
-### Search & Navigation
-- [ ] Search box in tree/list views
-- [ ] Jump to person in tree
+### Search & Navigation ✅ (v0.3.0)
+- [x] Search box in tree/list views
+- [x] Jump to person in tree (animated pan+zoom)
+- [x] Cmd+K keyboard shortcut to focus search
 - [ ] Keyboard navigation (arrow keys in tree)
 - [ ] Breadcrumb showing path from root
 
@@ -146,4 +147,4 @@
 
 ---
 
-*Last updated: 2025-02-05*
+*Last updated: 2026-02-07*
