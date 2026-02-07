@@ -62,10 +62,11 @@
 
 ## Priority 3: Advanced Features
 
-### Stories Feature (DB exists, UI needed)
-- [ ] Add stories to persons
-- [ ] Fun facts toggle
-- [ ] Story display in person detail
+### Stories Feature ✅ (v0.4.0)
+- [x] Add stories to persons
+- [x] Fun facts toggle
+- [x] Story display in person detail
+- [x] Story count on person list cards
 - [ ] Story timeline view
 
 ### Export & Sharing

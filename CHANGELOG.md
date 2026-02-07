@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-07
+
+### Added
+- **Stories & Fun Facts** — full CRUD for stories on person detail pages (PR #6)
+- Add, edit, and delete stories on any person (any member can add; only author can edit/delete)
+- "Fun Fact" toggle with green pill badge on story cards
+- Author attribution (display name or email) with relative timestamps ("just now", "5 minutes ago", etc.)
+- `formatRelativeTime()` utility with 8 unit tests
+- Story count badges on person list cards ("1 story", "3 stories")
+- `StoryWithAuthor` type extending Story with author profile join
+- Inline delete confirmation ("Delete? Yes / No") to prevent accidental deletions
+- Server actions: `createStory`, `updateStory`, `deleteStory` with auth + RLS enforcement
+
 ## [0.3.0] - 2026-02-07
 
 ### Added
