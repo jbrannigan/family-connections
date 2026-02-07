@@ -52,12 +52,14 @@ export default function PersonList({
   initialRelationships,
   isAdmin,
   searchQuery = "",
+  storyCountMap,
 }: {
   graphId: string;
   initialPersons: Person[];
   initialRelationships: Relationship[];
   isAdmin: boolean;
   searchQuery?: string;
+  storyCountMap?: Record<string, number>;
 }) {
   const [persons, setPersons] = useState<Person[]>(initialPersons);
   const [relationships, setRelationships] =
@@ -311,6 +313,14 @@ export default function PersonList({
                 {person.birth_date && (
                   <p className="text-sm text-white/40">
                     Born: {person.birth_date}
+                  </p>
+                )}
+                {storyCountMap?.[person.id] && storyCountMap[person.id] > 0 && (
+                  <p className="text-sm text-white/40">
+                    <span className="text-[#7fdb9a]">
+                      {storyCountMap[person.id]}
+                    </span>{" "}
+                    {storyCountMap[person.id] === 1 ? "story" : "stories"}
                   </p>
                 )}
 

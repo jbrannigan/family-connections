@@ -14,6 +14,7 @@ interface GraphViewToggleProps {
   persons: Person[];
   relationships: Relationship[];
   isAdmin: boolean;
+  storyCountMap?: Record<string, number>;
 }
 
 export default function GraphViewToggle({
@@ -21,6 +22,7 @@ export default function GraphViewToggle({
   persons,
   relationships,
   isAdmin,
+  storyCountMap,
 }: GraphViewToggleProps) {
   const [view, setView] = useState<ViewMode>("tree");
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,6 +97,7 @@ export default function GraphViewToggle({
             initialRelationships={relationships}
             isAdmin={isAdmin}
             searchQuery={searchQuery}
+            storyCountMap={storyCountMap}
           />
         </div>
       )}

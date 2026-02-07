@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { normalizeDate, isValidDate, formatDateForDisplay } from "./date-utils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  normalizeDate,
+  isValidDate,
+  formatDateForDisplay,
+  formatRelativeTime,
+} from "./date-utils";
 
 describe("normalizeDate", () => {
   it("returns null for null input", () => {
@@ -79,5 +84,60 @@ describe("formatDateForDisplay", () => {
 
   it("handles single-digit days correctly", () => {
     expect(formatDateForDisplay("1958-03-01")).toBe("March 1, 1958");
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const NOW = new Date("2026-02-07T12:00:00Z").getTime();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns "just now" for timestamps less than a minute ago', () => {
+    const tenSecondsAgo = new Date(NOW - 10_000).toISOString();
+    expect(formatRelativeTime(tenSecondsAgo)).toBe("just now");
+  });
+
+  it("returns singular minute", () => {
+    const oneMinuteAgo = new Date(NOW - 60_000).toISOString();
+    expect(formatRelativeTime(oneMinuteAgo)).toBe("1 minute ago");
+  });
+
+  it("returns plural minutes", () => {
+    const fiveMinutesAgo = new Date(NOW - 5 * 60_000).toISOString();
+    expect(formatRelativeTime(fiveMinutesAgo)).toBe("5 minutes ago");
+  });
+
+  it("returns singular hour", () => {
+    const oneHourAgo = new Date(NOW - 3_600_000).toISOString();
+    expect(formatRelativeTime(oneHourAgo)).toBe("1 hour ago");
+  });
+
+  it("returns plural hours", () => {
+    const threeHoursAgo = new Date(NOW - 3 * 3_600_000).toISOString();
+    expect(formatRelativeTime(threeHoursAgo)).toBe("3 hours ago");
+  });
+
+  it("returns singular day", () => {
+    const oneDayAgo = new Date(NOW - 86_400_000).toISOString();
+    expect(formatRelativeTime(oneDayAgo)).toBe("1 day ago");
+  });
+
+  it("returns plural days", () => {
+    const fiveDaysAgo = new Date(NOW - 5 * 86_400_000).toISOString();
+    expect(formatRelativeTime(fiveDaysAgo)).toBe("5 days ago");
+  });
+
+  it("returns formatted date for timestamps older than 30 days", () => {
+    const sixtyDaysAgo = new Date(NOW - 60 * 86_400_000).toISOString();
+    const result = formatRelativeTime(sixtyDaysAgo);
+    // Should be an absolute date like "Dec 9, 2025"
+    expect(result).toMatch(/\w{3} \d{1,2}, \d{4}/);
   });
 });

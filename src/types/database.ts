@@ -45,6 +45,10 @@ export interface Story {
   created_at: string;
 }
 
+export interface StoryWithAuthor extends Story {
+  author_name: string | null;
+}
+
 export interface FamilyGraph {
   id: string;
   name: string;

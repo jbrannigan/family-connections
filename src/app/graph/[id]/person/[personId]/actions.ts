@@ -73,3 +73,97 @@ export async function updatePerson(
 
   revalidatePath(`/graph/${graphId}/person/${personId}`);
 }
+
+export async function createStory(
+  graphId: string,
+  personId: string,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  // Verify membership (any member can add stories)
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!membership) throw new Error("Not a member of this graph");
+
+  const content = (formData.get("content") as string)?.trim();
+  if (!content) throw new Error("Story content is required");
+
+  const isFunFact = formData.get("is_fun_fact") === "true";
+
+  const { error } = await supabase.from("stories").insert({
+    graph_id: graphId,
+    person_id: personId,
+    content,
+    is_fun_fact: isFunFact,
+    author_id: user.id,
+  });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${personId}`);
+}
+
+export async function updateStory(
+  graphId: string,
+  personId: string,
+  storyId: string,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  const content = (formData.get("content") as string)?.trim();
+  if (!content) throw new Error("Story content is required");
+
+  const isFunFact = formData.get("is_fun_fact") === "true";
+
+  // RLS enforces author-only update; we also check explicitly
+  const { error } = await supabase
+    .from("stories")
+    .update({ content, is_fun_fact: isFunFact })
+    .eq("id", storyId)
+    .eq("author_id", user.id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${personId}`);
+}
+
+export async function deleteStory(
+  graphId: string,
+  personId: string,
+  storyId: string,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  // RLS enforces author-only delete
+  const { error } = await supabase
+    .from("stories")
+    .delete()
+    .eq("id", storyId)
+    .eq("author_id", user.id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${personId}`);
+}

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Person, Relationship, Story } from "@/types/database";
+import type { Person, Relationship, StoryWithAuthor } from "@/types/database";
 import { formatDateForDisplay } from "@/lib/date-utils";
 import { updatePerson } from "./actions";
+import StorySection from "./story-section";
 
 const RELATIONSHIP_TYPE_LABELS: Record<string, string> = {
   biological_parent: "Biological",
@@ -21,8 +22,9 @@ interface PersonDetailProps {
   person: Person;
   allPersons: { id: string; display_name: string }[];
   relationships: Relationship[];
-  stories: Story[];
+  stories: StoryWithAuthor[];
   isAdmin: boolean;
+  currentUserId: string;
 }
 
 interface GroupedRelationships {
@@ -80,6 +82,7 @@ export default function PersonDetail({
   relationships,
   stories,
   isAdmin,
+  currentUserId,
 }: PersonDetailProps) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "edit">("view");
@@ -258,40 +261,22 @@ export default function PersonDetail({
         )}
 
         {/* Stories */}
-        {stories.length > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <h2 className="mb-4 text-xs font-medium uppercase tracking-wider text-white/40">
-              Stories
-            </h2>
-            <div className="space-y-4">
-              {stories.map((story) => (
-                <div
-                  key={story.id}
-                  className="rounded-xl border border-white/5 bg-white/5 p-4"
-                >
-                  {story.is_fun_fact && (
-                    <span className="mb-2 inline-block rounded-full bg-[#7fdb9a]/10 px-2.5 py-0.5 text-xs font-medium text-[#7fdb9a]">
-                      Fun Fact
-                    </span>
-                  )}
-                  <p className="whitespace-pre-wrap text-sm text-white/70">
-                    {story.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <StorySection
+          graphId={graphId}
+          personId={person.id}
+          personName={person.display_name}
+          stories={stories}
+          currentUserId={currentUserId}
+        />
 
-        {/* Empty state */}
+        {/* Empty state (no details besides stories section) */}
         {!person.birth_date &&
           !person.death_date &&
           !person.birth_location &&
           !person.notes &&
           grouped.parents.length === 0 &&
           grouped.spouses.length === 0 &&
-          grouped.children.length === 0 &&
-          stories.length === 0 && (
+          grouped.children.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/20 p-12 text-center">
               <p className="text-white/40">
                 No details recorded yet.
