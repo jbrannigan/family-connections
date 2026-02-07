@@ -48,6 +48,17 @@ export default async function GraphPage({
     .select("*")
     .eq("graph_id", id);
 
+  // Fetch story counts per person
+  const { data: storyRows } = await supabase
+    .from("stories")
+    .select("person_id")
+    .eq("graph_id", id);
+
+  const storyCountMap: Record<string, number> = {};
+  for (const row of storyRows ?? []) {
+    storyCountMap[row.person_id] = (storyCountMap[row.person_id] ?? 0) + 1;
+  }
+
   const isAdmin = membership.role === "admin";
 
   return (
@@ -108,6 +119,7 @@ export default async function GraphPage({
           persons={persons ?? []}
           relationships={relationships ?? []}
           isAdmin={isAdmin}
+          storyCountMap={storyCountMap}
         />
       </main>
     </div>

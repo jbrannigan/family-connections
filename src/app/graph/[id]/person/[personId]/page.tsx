@@ -59,11 +59,37 @@ export default async function PersonPage({
     .or(`person_a.eq.${personId},person_b.eq.${personId}`);
 
   // Fetch stories for this person
-  const { data: stories } = await supabase
+  const { data: storiesRaw } = await supabase
     .from("stories")
     .select("*")
     .eq("person_id", personId)
     .order("created_at", { ascending: false });
+
+  // Fetch author profiles for stories
+  const authorIds = [
+    ...new Set((storiesRaw ?? []).map((s) => s.author_id)),
+  ];
+  const { data: authorProfiles } =
+    authorIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", authorIds)
+      : { data: [] };
+
+  const profileMap = new Map(
+    (authorProfiles ?? []).map(
+      (p: { id: string; display_name: string | null }) => [
+        p.id,
+        p.display_name,
+      ],
+    ),
+  );
+
+  const stories = (storiesRaw ?? []).map((s) => ({
+    ...s,
+    author_name: profileMap.get(s.author_id) ?? null,
+  }));
 
   const isAdmin = membership.role === "admin";
 
@@ -98,8 +124,9 @@ export default async function PersonPage({
           person={person}
           allPersons={allPersons ?? []}
           relationships={relationships ?? []}
-          stories={stories ?? []}
+          stories={stories}
           isAdmin={isAdmin}
+          currentUserId={user.id}
         />
       </main>
     </div>
