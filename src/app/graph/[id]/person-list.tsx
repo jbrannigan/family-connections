@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Person, Relationship, RelationshipType } from "@/types/database";
+import { searchPersons } from "@/lib/search";
+import { HighlightedText } from "./search-input";
 
 const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   biological_parent: "Parent (biological)",
@@ -49,11 +51,13 @@ export default function PersonList({
   initialPersons,
   initialRelationships,
   isAdmin,
+  searchQuery = "",
 }: {
   graphId: string;
   initialPersons: Person[];
   initialRelationships: Relationship[];
   isAdmin: boolean;
+  searchQuery?: string;
 }) {
   const [persons, setPersons] = useState<Person[]>(initialPersons);
   const [relationships, setRelationships] =
@@ -175,11 +179,23 @@ export default function PersonList({
       });
   }
 
+  // Search filtering
+  const searchResults = searchQuery.trim()
+    ? searchPersons(persons, searchQuery)
+    : persons.map((p) => ({ person: p, matchRanges: [] }));
+  const matchRangeMap = new Map(
+    searchResults.map((r) => [r.person.id, r.matchRanges]),
+  );
+  const displayPersons = searchResults.map((r) => r.person);
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold">
-          Family Members ({persons.length})
+          Family Members{" "}
+          {searchQuery.trim()
+            ? `(${displayPersons.length} of ${persons.length})`
+            : `(${persons.length})`}
         </h2>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
@@ -251,9 +267,17 @@ export default function PersonList({
             Click &quot;+ Add Person&quot; to start building your family graph.
           </p>
         </div>
+      ) : displayPersons.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/20 p-12 text-center">
+          <div className="mb-3 text-4xl">🔍</div>
+          <h3 className="mb-1 text-lg font-semibold">No persons found</h3>
+          <p className="text-sm text-white/50">
+            No family members match &quot;{searchQuery}&quot;
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {persons.map((person) => {
+          {displayPersons.map((person) => {
             const rels = getRelationshipsFor(person.id);
             const isAddingRel = addingRelFor === person.id;
             const otherPersons = persons.filter((p) => p.id !== person.id);
@@ -268,7 +292,10 @@ export default function PersonList({
                     href={`/graph/${graphId}/person/${person.id}`}
                     className="text-lg font-semibold transition hover:text-[#7fdb9a]"
                   >
-                    {person.display_name}
+                    <HighlightedText
+                      text={person.display_name}
+                      ranges={matchRangeMap.get(person.id) ?? []}
+                    />
                   </Link>
                   {person.is_incomplete && (
                     <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400">
