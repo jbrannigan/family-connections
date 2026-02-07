@@ -7,12 +7,15 @@ Discover how your family is connected. A full-stack family relationship app with
 ## Features
 
 - **Family Graph** — model all relationship types (biological, adoptive, step, spouse), not just a rigid tree hierarchy
+- **Person Detail Pages** — view and edit any person's info, dates, notes, and relationships with links to related persons
+- **Search & Navigation** — find anyone instantly with real-time filtering (list view) or jump-to-person with animated pan+zoom (tree view); `Cmd+K` keyboard shortcut
+- **Interactive Tree** — SVG-based tree visualization with couple nodes, pan/zoom, and click-to-navigate
 - **QR Connect** — scan codes at family reunions to instantly see how you're related
 - **Relationship Calculator** — find the path between any two people and compute kinship (e.g. "2nd cousin once removed")
 - **Stories & Fun Facts** — collect memories and family history from everyone
-- **Authentication** — magic link sign-in via Supabase Auth
+- **Authentication** — password-based sign-in via Supabase Auth
 - **Collaboration** — invite family members to contribute via invite codes
-- **TreeDown Import** — migrate existing data from the Family Tree Editor
+- **TreeDown Import** — bulk import family trees from indentation-based text format with gender-based surname inference
 
 ## Tech Stack
 

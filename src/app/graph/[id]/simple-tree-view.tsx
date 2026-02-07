@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
 import { useRouter } from "next/navigation";
 import type { Person, Relationship } from "@/types/database";
 import {
@@ -12,6 +12,10 @@ interface SimpleTreeViewProps {
   graphId: string;
   persons: Person[];
   relationships: Relationship[];
+}
+
+export interface SimpleTreeViewHandle {
+  focusOnPerson: (personId: string) => void;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -26,253 +30,353 @@ const NODE_HEIGHT = 50;
 const NODE_H_SPACING = 40;
 const NODE_V_SPACING = 80;
 
-export default function SimpleTreeView({
-  graphId,
-  persons,
-  relationships,
-}: SimpleTreeViewProps) {
-  const router = useRouter();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [nodeCount, setNodeCount] = useState(0);
+const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProps>(
+  function SimpleTreeView({ graphId, persons, relationships }, ref) {
+    const router = useRouter();
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [nodeCount, setNodeCount] = useState(0);
 
-  useEffect(() => {
-    let mounted = true;
+    // Refs for programmatic zoom control
+    const zoomRef = useRef<any>(null);
+    const svgSelectionRef = useRef<any>(null);
+    const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
+      new Map(),
+    );
 
-    async function loadAndRender() {
-      if (!containerRef.current) return;
+    // Expose focusOnPerson method via ref
+    useImperativeHandle(
+      ref,
+      () => ({
+        focusOnPerson(personId: string) {
+          const pos = nodePositionsRef.current.get(personId);
+          if (!pos || !zoomRef.current || !svgSelectionRef.current) return;
 
-      try {
-        setIsLoading(true);
-        setError(null);
+          const d3 = (window as any).d3;
+          if (!d3) return;
 
-        // Load D3 if not already loaded
-        if (!(window as any).d3) {
-          await loadScript(
-            "https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js",
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect) return;
+
+          const svgWidth = rect.width || 800;
+          const svgHeight = rect.height || 600;
+
+          // Center the target node in the viewport
+          // D3 tree layout: node.y = horizontal depth, node.x = vertical sibling position
+          const targetScale = 1.2;
+          const targetX = svgWidth / 2 - pos.y * targetScale;
+          const targetY = svgHeight / 2 - pos.x * targetScale;
+
+          const transform = d3.zoomIdentity
+            .translate(targetX, targetY)
+            .scale(targetScale);
+
+          svgSelectionRef.current
+            .transition()
+            .duration(750)
+            .call(zoomRef.current.transform, transform);
+
+          // Highlight the target node briefly
+          svgSelectionRef.current
+            .select("g")
+            .selectAll(".node")
+            .filter((d: any) => d.data.personIds?.includes(personId))
+            .select("rect")
+            .transition()
+            .duration(200)
+            .attr("stroke", "#ffffff")
+            .attr("stroke-width", 3)
+            .transition()
+            .delay(2000)
+            .duration(500)
+            .attr("stroke", "#7fdb9a")
+            .attr("stroke-width", 1.5);
+        },
+      }),
+      [],
+    );
+
+    useEffect(() => {
+      let mounted = true;
+
+      async function loadAndRender() {
+        if (!containerRef.current) return;
+
+        try {
+          setIsLoading(true);
+          setError(null);
+
+          // Load D3 if not already loaded
+          if (!(window as any).d3) {
+            await loadScript(
+              "https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js",
+            );
+            // Wait a tick for D3 to initialize
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+
+          const d3 = (window as any).d3;
+          if (!d3 || !d3.hierarchy) {
+            throw new Error(
+              "D3 library failed to load properly. Please refresh the page.",
+            );
+          }
+
+          if (!mounted) return;
+
+          // Transform data to hierarchical format
+          const treeData = transformToHierarchicalTree(persons, relationships);
+
+          if (treeData.length === 0) {
+            setError("No family tree data to display.");
+            setIsLoading(false);
+            return;
+          }
+
+          const rootData = treeData[0];
+
+          // Count nodes
+          function countNodes(node: TreeDisplayNode): number {
+            let count = 1;
+            for (const child of node.children) {
+              count += countNodes(child);
+            }
+            return count;
+          }
+          setNodeCount(countNodes(rootData));
+
+          // Clear container
+          const container = containerRef.current;
+          container.innerHTML = "";
+
+          // Create hierarchy
+          const root = d3.hierarchy(rootData);
+
+          // Count total nodes and max depth for sizing
+          const descendants = root.descendants();
+          const maxDepth = Math.max(
+            ...descendants.map((d: any) => d.depth),
           );
-          // Wait a tick for D3 to initialize
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
 
-        const d3 = (window as any).d3;
-        if (!d3 || !d3.hierarchy) {
-          throw new Error("D3 library failed to load properly. Please refresh the page.");
-        }
-
-        if (!mounted) return;
-
-        // Transform data to hierarchical format
-        const treeData = transformToHierarchicalTree(persons, relationships);
-
-        if (treeData.length === 0) {
-          setError("No family tree data to display.");
-          setIsLoading(false);
-          return;
-        }
-
-        const rootData = treeData[0];
-
-        // Count nodes
-        function countNodes(node: TreeDisplayNode): number {
-          let count = 1;
-          for (const child of node.children) {
-            count += countNodes(child);
+          // Count nodes at each depth level
+          const nodesPerLevel: number[] = [];
+          for (const node of descendants) {
+            nodesPerLevel[node.depth] =
+              (nodesPerLevel[node.depth] || 0) + 1;
           }
-          return count;
-        }
-        setNodeCount(countNodes(rootData));
 
-        // Clear container
-        const container = containerRef.current;
-        container.innerHTML = "";
+          // Create tree layout (horizontal orientation: root on left)
+          const treeLayout = d3
+            .tree()
+            .nodeSize([
+              NODE_HEIGHT + NODE_V_SPACING,
+              NODE_WIDTH + NODE_H_SPACING,
+            ])
+            .separation(() => 1.2);
 
-        // Create hierarchy
-        const root = d3.hierarchy(rootData);
+          // Apply layout
+          treeLayout(root);
 
-        // Count total nodes and max depth for sizing
-        const descendants = root.descendants();
-        const maxDepth = Math.max(...descendants.map((d: any) => d.depth));
+          // Build person-to-position lookup for focusOnPerson
+          const posMap = new Map<string, { x: number; y: number }>();
+          for (const d of descendants) {
+            const node = d as { x: number; y: number; data: TreeDisplayNode };
+            for (const pid of node.data.personIds) {
+              posMap.set(pid, { x: node.x, y: node.y });
+            }
+          }
+          nodePositionsRef.current = posMap;
 
-        // Count nodes at each depth level
-        const nodesPerLevel: number[] = [];
-        for (const node of descendants) {
-          nodesPerLevel[node.depth] = (nodesPerLevel[node.depth] || 0) + 1;
-        }
-        const maxNodesAtLevel = Math.max(...nodesPerLevel);
+          // Get container dimensions
+          const rect = container.getBoundingClientRect();
+          const svgWidth = rect.width || 800;
+          const svgHeight = rect.height || 600;
 
-        // Calculate tree dimensions
-        const treeWidth = maxNodesAtLevel * (NODE_WIDTH + NODE_H_SPACING);
-        const treeHeight = (maxDepth + 1) * (NODE_HEIGHT + NODE_V_SPACING);
+          // Create SVG
+          const svg = d3
+            .select(container)
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
+            .style("background", "#0a1410");
 
-        // Create tree layout (horizontal orientation: root on left)
-        const treeLayout = d3.tree()
-          .nodeSize([NODE_HEIGHT + NODE_V_SPACING, NODE_WIDTH + NODE_H_SPACING])
-          .separation(() => 1.2);
+          // Store SVG selection for programmatic zoom
+          svgSelectionRef.current = svg;
 
-        // Apply layout
-        treeLayout(root);
+          // Create zoom behavior
+          const zoom = d3
+            .zoom()
+            .scaleExtent([0.1, 3])
+            .on("zoom", (event: D3ZoomEvent) => {
+              g.attr(
+                "transform",
+                `translate(${event.transform.x},${event.transform.y}) scale(${event.transform.k})`,
+              );
+            });
 
-        // Get container dimensions
-        const rect = container.getBoundingClientRect();
-        const svgWidth = rect.width || 800;
-        const svgHeight = rect.height || 600;
+          // Store zoom behavior for programmatic zoom
+          zoomRef.current = zoom;
 
-        // Create SVG
-        const svg = d3.select(container)
-          .append("svg")
-          .attr("width", "100%")
-          .attr("height", "100%")
-          .attr("viewBox", `0 0 ${svgWidth} ${svgHeight}`)
-          .style("background", "#0a1410");
+          svg.call(zoom as unknown);
 
-        // Create zoom behavior
-        const zoom = d3.zoom()
-          .scaleExtent([0.1, 3])
-          .on("zoom", (event: D3ZoomEvent) => {
-            g.attr("transform", `translate(${event.transform.x},${event.transform.y}) scale(${event.transform.k})`);
-          });
+          // Create main group for transformations
+          const g = svg.append("g");
 
-        svg.call(zoom as unknown);
+          // Initial transform to center the root
+          const initialX = svgWidth / 4;
+          const initialY = svgHeight / 2;
+          svg.call(
+            zoom.transform as unknown,
+            d3.zoomIdentity.translate(initialX, initialY).scale(0.8),
+          );
 
-        // Create main group for transformations
-        const g = svg.append("g");
+          // Draw links (connections between nodes)
+          const linkGenerator = d3
+            .linkHorizontal()
+            .x((d: unknown) => (d as { y: number }).y)
+            .y((d: unknown) => (d as { x: number }).x);
 
-        // Initial transform to center the root
-        const initialX = svgWidth / 4;
-        const initialY = svgHeight / 2;
-        svg.call(
-          zoom.transform as unknown,
-          d3.zoomIdentity.translate(initialX, initialY).scale(0.8),
-        );
+          g.selectAll(".link")
+            .data(root.links())
+            .enter()
+            .append("path")
+            .attr("class", "link")
+            .attr("d", linkGenerator as unknown as string)
+            .attr("fill", "none")
+            .attr("stroke", "#7fdb9a")
+            .attr("stroke-width", "1.5");
 
-        // Draw links (connections between nodes)
-        const linkGenerator = d3.linkHorizontal()
-          .x((d: unknown) => (d as { y: number }).y)
-          .y((d: unknown) => (d as { x: number }).x);
+          // Draw nodes
+          const nodes = g
+            .selectAll(".node")
+            .data(descendants)
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            .attr("transform", (d: unknown) => {
+              const node = d as { x: number; y: number };
+              return `translate(${node.y},${node.x})`;
+            });
 
-        g.selectAll(".link")
-          .data(root.links())
-          .enter()
-          .append("path")
-          .attr("class", "link")
-          .attr("d", linkGenerator as unknown as string)
-          .attr("fill", "none")
-          .attr("stroke", "#7fdb9a")
-          .attr("stroke-width", "1.5");
-
-        // Draw nodes
-        const nodes = g.selectAll(".node")
-          .data(descendants)
-          .enter()
-          .append("g")
-          .attr("class", "node")
-          .attr("transform", (d: unknown) => {
-            const node = d as { x: number; y: number };
-            return `translate(${node.y},${node.x})`;
-          });
-
-        // Node background rectangles
-        nodes.append("rect")
-          .attr("x", -NODE_WIDTH / 2)
-          .attr("y", -NODE_HEIGHT / 2)
-          .attr("width", NODE_WIDTH)
-          .attr("height", NODE_HEIGHT)
-          .attr("rx", 6)
-          .attr("fill", "#1a2f25")
-          .attr("stroke", "#7fdb9a")
-          .attr("stroke-width", 1.5)
-          .style("cursor", "pointer");
-
-        // Node text
-        nodes.append("text")
-          .attr("text-anchor", "middle")
-          .attr("dy", "0.35em")
-          .attr("fill", "#e0f0e6")
-          .attr("font-size", "11px")
-          .attr("font-family", "system-ui, sans-serif")
-          .text((d: unknown) => {
-            const node = d as { data: TreeDisplayNode };
-            const name = node.data.name;
-            // Truncate if too long
-            return name.length > 45 ? name.substring(0, 42) + "..." : name;
-          })
-          .style("cursor", "pointer");
-
-        // Add hover effects
-        nodes.on("mouseover", function(this: any) {
-          d3.select(this).select("rect")
-            .attr("stroke-width", 2.5)
-            .attr("stroke", "#a0f0b0");
-        });
-
-        nodes.on("mouseout", function(this: any) {
-          d3.select(this).select("rect")
+          // Node background rectangles
+          nodes
+            .append("rect")
+            .attr("x", -NODE_WIDTH / 2)
+            .attr("y", -NODE_HEIGHT / 2)
+            .attr("width", NODE_WIDTH)
+            .attr("height", NODE_HEIGHT)
+            .attr("rx", 6)
+            .attr("fill", "#1a2f25")
+            .attr("stroke", "#7fdb9a")
             .attr("stroke-width", 1.5)
-            .attr("stroke", "#7fdb9a");
-        });
+            .style("cursor", "pointer");
 
-        // Click to navigate to person detail page
-        nodes.on("click", (_event: unknown, d: unknown) => {
-          const node = d as { data: TreeDisplayNode };
-          if (node.data.personIds && node.data.personIds.length > 0) {
-            router.push(`/graph/${graphId}/person/${node.data.personIds[0]}`);
-          }
-        });
+          // Node text
+          nodes
+            .append("text")
+            .attr("text-anchor", "middle")
+            .attr("dy", "0.35em")
+            .attr("fill", "#e0f0e6")
+            .attr("font-size", "11px")
+            .attr("font-family", "system-ui, sans-serif")
+            .text((d: unknown) => {
+              const node = d as { data: TreeDisplayNode };
+              const name = node.data.name;
+              // Truncate if too long
+              return name.length > 45
+                ? name.substring(0, 42) + "..."
+                : name;
+            })
+            .style("cursor", "pointer");
 
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Tree render error:", err);
-        if (mounted) {
-          setError(err instanceof Error ? err.message : "Failed to render tree");
+          // Add hover effects
+          nodes.on("mouseover", function (this: any) {
+            d3.select(this)
+              .select("rect")
+              .attr("stroke-width", 2.5)
+              .attr("stroke", "#a0f0b0");
+          });
+
+          nodes.on("mouseout", function (this: any) {
+            d3.select(this)
+              .select("rect")
+              .attr("stroke-width", 1.5)
+              .attr("stroke", "#7fdb9a");
+          });
+
+          // Click to navigate to person detail page
+          nodes.on("click", (_event: unknown, d: unknown) => {
+            const node = d as { data: TreeDisplayNode };
+            if (node.data.personIds && node.data.personIds.length > 0) {
+              router.push(
+                `/graph/${graphId}/person/${node.data.personIds[0]}`,
+              );
+            }
+          });
+
           setIsLoading(false);
+        } catch (err) {
+          console.error("Tree render error:", err);
+          if (mounted) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Failed to render tree",
+            );
+            setIsLoading(false);
+          }
         }
       }
-    }
 
-    loadAndRender();
+      loadAndRender();
 
-    return () => {
-      mounted = false;
-    };
-  }, [persons, relationships, graphId, router]);
+      return () => {
+        mounted = false;
+      };
+    }, [persons, relationships, graphId, router]);
 
-  return (
-    <div className="relative w-full h-full min-h-[600px] bg-[#0a1410]">
-      {/* Info bar */}
-      {!isLoading && !error && (
-        <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20">
-          {nodeCount} family units • Scroll to zoom, drag to pan
-        </div>
-      )}
-
-      {/* Tree container */}
-      <div
-        ref={containerRef}
-        className="w-full h-full"
-        style={{ minHeight: "600px" }}
-      />
-
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0a1410]/80">
-          <div className="text-[#7fdb9a] text-lg">Loading family tree...</div>
-        </div>
-      )}
-
-      {/* Error overlay */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0a1410]/80">
-          <div className="text-red-400 text-center p-4 max-w-md">
-            <p className="text-lg font-semibold mb-2">Error</p>
-            <p>{error}</p>
+    return (
+      <div className="relative w-full h-full min-h-[600px] bg-[#0a1410]">
+        {/* Info bar */}
+        {!isLoading && !error && (
+          <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20">
+            {nodeCount} family units • Scroll to zoom, drag to pan
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
+        )}
+
+        {/* Tree container */}
+        <div
+          ref={containerRef}
+          className="w-full h-full"
+          style={{ minHeight: "600px" }}
+        />
+
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a1410]/80">
+            <div className="text-[#7fdb9a] text-lg">
+              Loading family tree...
+            </div>
+          </div>
+        )}
+
+        {/* Error overlay */}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0a1410]/80">
+            <div className="text-red-400 text-center p-4 max-w-md">
+              <p className="text-lg font-semibold mb-2">Error</p>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
+export default SimpleTreeView;
 
 // Helper to load scripts dynamically
 function loadScript(src: string): Promise<void> {
