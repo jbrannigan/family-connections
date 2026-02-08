@@ -27,7 +27,7 @@ export default function SettingsButton({
       <button
         onClick={() => setIsOpen(true)}
         title="Graph Settings"
-        className="rounded-xl border border-white/20 px-3 py-1.5 text-sm font-semibold transition hover:bg-white/5"
+        className="rounded-xl border border-white/20 px-3 py-2.5 text-sm font-semibold transition hover:bg-white/5 sm:py-1.5"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

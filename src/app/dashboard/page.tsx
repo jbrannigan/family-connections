@@ -29,34 +29,34 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#0a1410] text-white">
       <header className="border-b border-white/10 bg-[#0f1a14]/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] text-lg">
               🌳
             </div>
-            <span className="text-lg font-bold text-[#7fdb9a]">
+            <span className="hidden text-lg font-bold text-[#7fdb9a] sm:inline">
               Family Connections
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href="/guide"
               className="text-sm text-white/40 transition hover:text-white/60"
             >
               Guide
             </Link>
-            <span className="text-sm text-white/50">{user.email}</span>
+            <span className="hidden text-sm text-white/50 sm:inline">{user.email}</span>
             <SignOutButton />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Your Family Graphs</h1>
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-12">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">Your Family Graphs</h1>
           <Link
             href="/dashboard/new"
-            className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-6 py-2.5 font-semibold text-[#0f1a14] transition hover:opacity-90"
+            className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-5 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 sm:px-6 sm:text-base"
           >
             + New Graph
           </Link>

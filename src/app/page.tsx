@@ -3,30 +3,30 @@ import Link from "next/link";
 export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1a472a] via-[#2d5a3d] to-[#1e3a28] text-white">
-      <main className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-6 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] text-4xl">
+      <main className="mx-auto flex max-w-2xl flex-col items-center gap-6 px-4 text-center sm:gap-8 sm:px-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] text-3xl sm:h-20 sm:w-20 sm:text-4xl">
           🌳
         </div>
 
-        <h1 className="text-5xl font-bold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
           <span className="text-[#7fdb9a]">Family</span> Connections
         </h1>
 
-        <p className="max-w-md text-lg leading-relaxed text-white/70">
+        <p className="max-w-md text-base leading-relaxed text-white/70 sm:text-lg">
           Discover how your family is connected. Scan QR codes at reunions to
           instantly see your relationship path.
         </p>
 
-        <div className="flex gap-4">
+        <div className="flex gap-3 sm:gap-4">
           <Link
             href="/auth/login"
-            className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-8 py-3 font-semibold text-[#0f1a14] transition hover:opacity-90"
+            className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-6 py-3 font-semibold text-[#0f1a14] transition hover:opacity-90 sm:px-8"
           >
             Get Started
           </Link>
           <Link
             href="/auth/login"
-            className="rounded-xl border border-white/20 px-8 py-3 font-semibold transition hover:bg-white/10"
+            className="rounded-xl border border-white/20 px-6 py-3 font-semibold transition hover:bg-white/10 sm:px-8"
           >
             Sign In
           </Link>
@@ -42,7 +42,7 @@ export default function LandingPage() {
           </Link>
         </p>
 
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-12 sm:gap-6 sm:grid-cols-3">
           <Feature
             icon="📱"
             title="QR Connect"

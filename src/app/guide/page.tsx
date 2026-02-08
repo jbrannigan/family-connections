@@ -33,12 +33,12 @@ export default async function GuidePage() {
   return (
     <div className="min-h-screen bg-[#0a1410] text-white">
       <header className="border-b border-white/10 bg-[#0f1a14]/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] text-lg">
               {"\u{1F333}"}
             </div>
-            <span className="text-lg font-bold text-[#7fdb9a]">
+            <span className="hidden text-lg font-bold text-[#7fdb9a] sm:inline">
               Family Connections
             </span>
           </Link>
@@ -51,10 +51,10 @@ export default async function GuidePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-6 py-12">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-12">
         {/* Page title */}
-        <div className="mb-12 text-center">
-          <h1 className="mb-4 text-4xl font-bold">User Guide</h1>
+        <div className="mb-8 text-center sm:mb-12">
+          <h1 className="mb-4 text-3xl font-bold sm:text-4xl">User Guide</h1>
           <p className="mx-auto max-w-xl text-lg text-white/60">
             Everything you need to know about using Family Connections to build,
             explore, and share your family tree.
@@ -566,7 +566,7 @@ function SectionHeading({ emoji, title }: { emoji: string; title: string }) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6">
       {children}
     </div>
   );

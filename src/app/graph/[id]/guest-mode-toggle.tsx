@@ -105,7 +105,7 @@ export default function GuestModeToggle() {
       {/* Toggle Button */}
       <button
         onClick={handleToggleClick}
-        className={`rounded-xl px-3 py-1.5 text-sm font-semibold transition ${
+        className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition sm:py-1.5 ${
           isGuestMode
             ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
             : "border border-white/20 text-white/50 hover:bg-white/5 hover:text-white/70"
