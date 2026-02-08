@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-02-08
+
+### Fixed
+- **Mobile Responsiveness** — fix layout overflow and touch target issues across all pages (Feature 016, PR #17)
+- Headers: hide brand text and email on narrow screens, responsive padding (`px-4 py-3` mobile, `px-6 py-4` desktop)
+- Graph toolbar: flex-wrap on buttons, 44px minimum touch targets on all interactive elements
+- Tree settings: icon-only buttons on mobile (↕, ↔, ⌒, ⊾, ▬, ▣) with abbreviated labels
+- Search input: full-width on mobile, inline on desktop
+- Person-list: pronouns input `w-full sm:w-40` instead of fixed `w-40`
+- Tree container: `min-h-[400px]` on mobile (was `600px`)
+- Landing page: responsive hero title, icon, and button sizing
+- Guide page: responsive card padding and title
+
 ## [0.11.0] - 2026-02-07
 
 ### Added

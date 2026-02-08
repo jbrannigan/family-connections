@@ -54,10 +54,13 @@
 - [ ] Upload avatar
 - [ ] View graphs user belongs to
 
-### Mobile Responsiveness
-- [ ] Touch-friendly tree navigation
-- [ ] Responsive list view
-- [ ] Mobile menu improvements
+### Mobile Responsiveness ✅ (v0.11.1)
+- [x] Responsive headers, padding, and touch targets across all pages
+- [x] Icon-only tree settings buttons on mobile
+- [x] Responsive form widths and tree container height
+- [ ] Touch gestures for tree navigation (pinch-to-zoom, swipe)
+- [ ] Mobile-specific navigation (hamburger menu, bottom nav)
+- [ ] PWA/offline support
 
 ---
 
