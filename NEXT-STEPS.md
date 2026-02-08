@@ -43,11 +43,11 @@
 
 ## Priority 2: User Experience
 
-### Graph Settings
-- [ ] Rename graph
-- [ ] Change owner
-- [ ] Manage members (invite, remove, change roles)
-- [ ] Delete graph (with confirmation)
+### Graph Settings ✅ (v0.11.0)
+- [x] Rename graph
+- [x] Change owner (transfer ownership)
+- [x] Manage members (invite, remove, change roles)
+- [x] Delete graph (with typed confirmation)
 
 ### Profile Management
 - [ ] Edit user display name

@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import GraphViewToggle from "./graph-view-toggle";
 import ExportButton from "./export-button";
 import InviteButton from "./invite-button";
+import SettingsButton from "./settings-button";
 import GuestModeToggle from "./guest-mode-toggle";
 import GuestModeBanner from "./guest-mode-banner";
 import { GuestModeProvider, useGuestMode } from "@/lib/guest-mode";
@@ -11,6 +13,7 @@ import {
   canExport,
   canImport,
   canInvite,
+  canManageMembers,
   canUseGuestMode,
   getRoleLabel,
 } from "@/lib/roles";
@@ -31,12 +34,14 @@ function GraphPageInner({
   graphId,
   graphName,
   role,
+  userId,
   userEmail,
   persons,
   relationships,
   storyCountMap,
-}: Omit<GraphPageClientProps, "userId">) {
+}: GraphPageClientProps) {
   const { isGuestMode } = useGuestMode();
+  const [displayName, setDisplayName] = useState(graphName);
 
   // In guest mode, override role to viewer-equivalent for UI checks
   const effectiveRole: MemberRole = isGuestMode ? "viewer" : role;
@@ -71,14 +76,24 @@ function GraphPageInner({
 
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold">{graphName}</h1>
+            <h1 className="text-3xl font-bold">{displayName}</h1>
           </div>
           <div className="flex items-center gap-3">
             {canUseGuestMode(role) && <GuestModeToggle />}
+            {canManageMembers(effectiveRole) && (
+              <SettingsButton
+                graphId={graphId}
+                graphName={displayName}
+                userId={userId}
+                personCount={persons.length}
+                relationshipCount={relationships.length}
+                onRename={setDisplayName}
+              />
+            )}
             {canInvite(effectiveRole) && (
               <InviteButton
                 graphId={graphId}
-                graphName={graphName}
+                graphName={displayName}
                 role={role}
               />
             )}

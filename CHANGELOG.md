@@ -7,6 +7,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-02-07
+
+### Added
+- **Graph Settings Modal** — owner-only settings accessible via ⚙️ button in graph header (Feature 015, PR #16)
+- **Rename Graph** — change your graph's name from the General tab
+- **Member Management** — view all members, change roles (Editor/Contributor/Viewer) via dropdown, remove members with inline confirmation
+- **Transfer Ownership** — hand off ownership to another member; former owner becomes Editor
+- **Delete Graph** — typed confirmation required (must match graph name exactly); CASCADE deletes all data and redirects to dashboard
+- 6 new server actions: `getMembers`, `renameGraph`, `updateMemberRole`, `removeMember`, `deleteGraph`, `transferOwnership`
+- `MemberInfo` type for member list with profile join
+- 2 new RLS policies: "Owners see graph memberships" (SELECT on memberships), "Owners delete graphs" (DELETE on family_graphs)
+
 ## [0.10.0] - 2026-02-07
 
 ### Added
