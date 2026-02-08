@@ -83,3 +83,11 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
 }
+
+/** Membership joined with profile info for member management UI. */
+export interface MemberInfo {
+  user_id: string;
+  role: MemberRole;
+  created_at: string;
+  display_name: string | null;
+}
