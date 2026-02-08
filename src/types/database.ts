@@ -6,7 +6,7 @@ export type RelationshipType =
   | "ex_spouse"
   | "partner";
 
-export type MemberRole = "admin" | "member";
+export type MemberRole = "owner" | "editor" | "contributor" | "viewer";
 
 export interface Person {
   id: string;
@@ -65,6 +65,16 @@ export interface Membership {
   user_id: string;
   graph_id: string;
   role: MemberRole;
+  created_at: string;
+}
+
+export interface InviteLink {
+  id: string;
+  graph_id: string;
+  token: string;
+  role: MemberRole;
+  created_by: string;
+  label: string | null;
   created_at: string;
 }
 

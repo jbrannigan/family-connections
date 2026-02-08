@@ -12,6 +12,7 @@ interface StorySectionProps {
   personName: string;
   stories: StoryWithAuthor[];
   currentUserId: string;
+  canAddStories?: boolean;
 }
 
 export default function StorySection({
@@ -20,6 +21,7 @@ export default function StorySection({
   personName,
   stories,
   currentUserId,
+  canAddStories = true,
 }: StorySectionProps) {
   const router = useRouter();
 
@@ -114,7 +116,7 @@ export default function StorySection({
         <h2 className="text-xs font-medium uppercase tracking-wider text-white/40">
           Stories{stories.length > 0 && ` (${stories.length})`}
         </h2>
-        {!addingStory && (
+        {canAddStories && !addingStory && (
           <button
             onClick={() => {
               setAddingStory(true);

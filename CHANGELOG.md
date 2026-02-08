@@ -7,6 +7,33 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-02-07
+
+### Added
+- **4-Tier Role System** — expanded from 2 roles (admin/member) to 4 roles: Owner, Editor, Contributor, Viewer (Feature 014, PR #15)
+- **Invite Links** — shareable URLs with role baked in, replacing raw invite codes; copy-to-clipboard and QR code generation for reunions
+- **`/join/[token]` Route** — public invite landing page showing graph name, assigned role, and join button; handles both authenticated and unauthenticated users with login redirect
+- **Guest Mode** — UI-level read-only toggle for safe device sharing at reunions; 4-digit PIN lock to exit; hides all edit/delete/import/export controls when active
+- `invite_links` database table with RLS policies for token-based role assignment
+- `GuestModeProvider` React context with `useSyncExternalStore` for PIN storage
+- 8 unit tests for PIN hashing utilities, 46 unit tests for role permissions
+- Invite button with modal in graph header (visible to Owner and Editor)
+- Guest Mode toggle with PIN setup/verify dialogs
+- "Guest Mode — Read Only" banner when active
+
+### Changed
+- Permission checks refactored from `isAdmin` boolean to role utility functions (`canEdit()`, `canAddStories()`, `canImport()`, `canExport()`, `canInvite()`, etc.)
+- Graph header now shows role badge for all members (previously only showed "Admin")
+- User guide updated with 4-role documentation, invite links section, and Guest Mode section
+- Login page supports `?redirect=` query parameter for post-login navigation
+- `AdminLabel` component in user guide replaced with `RoleLabel` showing "Owner only" or "Editor+"
+
+### Migration Notes
+- Existing `admin` users automatically migrated to `owner`
+- Existing `member` users automatically migrated to `viewer`
+- Legacy role names (`admin`, `member`) remain in PostgreSQL enum but are mapped via `normalizeRole()`
+- New RLS policies enforce role-based access at the database level
+
 ## [0.9.0] - 2026-02-07
 
 ### Added

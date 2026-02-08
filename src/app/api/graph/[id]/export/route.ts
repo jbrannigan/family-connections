@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateArchiveText, generateArchiveJSON } from "@/lib/archive-export";
 import type { StoryWithAuthor } from "@/types/database";
+import { canExport } from "@/lib/roles";
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Check membership (admin only)
+  // Check membership (owner only)
   const { data: membership } = await supabase
     .from("memberships")
     .select("role")
@@ -28,9 +29,9 @@ export async function GET(
     .eq("graph_id", id)
     .single();
 
-  if (!membership || membership.role !== "admin") {
+  if (!membership || !canExport(membership.role)) {
     return NextResponse.json(
-      { error: "Only admins can export" },
+      { error: "Only owners can export" },
       { status: 403 },
     );
   }

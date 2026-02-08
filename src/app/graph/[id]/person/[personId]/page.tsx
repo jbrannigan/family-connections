@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import PersonDetail from "./person-detail";
 import BackButton from "./back-button";
+import { canEdit, canAddStories } from "@/lib/roles";
 
 export default async function PersonPage({
   params,
@@ -92,7 +93,8 @@ export default async function PersonPage({
     author_name: profileMap.get(s.author_id) ?? null,
   }));
 
-  const isAdmin = membership.role === "admin";
+  const isEditor = canEdit(membership.role);
+  const isContributor = canAddStories(membership.role);
 
   return (
     <div className="min-h-screen bg-[#0a1410] text-white">
@@ -121,7 +123,8 @@ export default async function PersonPage({
           allPersons={allPersons ?? []}
           relationships={relationships ?? []}
           stories={stories}
-          isAdmin={isAdmin}
+          isEditor={isEditor}
+          canAddStories={isContributor}
           currentUserId={user.id}
         />
       </main>

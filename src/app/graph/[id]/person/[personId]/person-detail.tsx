@@ -25,7 +25,8 @@ interface PersonDetailProps {
   allPersons: Person[];
   relationships: Relationship[];
   stories: StoryWithAuthor[];
-  isAdmin: boolean;
+  isEditor: boolean;
+  canAddStories: boolean;
   currentUserId: string;
 }
 
@@ -78,7 +79,8 @@ export default function PersonDetail({
   allPersons,
   relationships,
   stories,
-  isAdmin,
+  isEditor,
+  canAddStories: canContribute,
   currentUserId,
 }: PersonDetailProps) {
   const router = useRouter();
@@ -186,7 +188,7 @@ export default function PersonDetail({
               )}
             </div>
           </div>
-          {isAdmin && (
+          {isEditor && (
             <button
               onClick={handleEdit}
               className="rounded-xl border border-white/20 px-5 py-2 text-sm font-semibold transition hover:bg-white/5"
@@ -297,6 +299,7 @@ export default function PersonDetail({
           personName={person.display_name}
           stories={stories}
           currentUserId={currentUserId}
+          canAddStories={canContribute}
         />
 
         {/* Empty state (no details besides stories section) */}
@@ -310,7 +313,7 @@ export default function PersonDetail({
             <div className="rounded-2xl border border-dashed border-white/20 p-12 text-center">
               <p className="text-white/40">
                 No details recorded yet.
-                {isAdmin && " Click Edit to add information."}
+                {isEditor && " Click Edit to add information."}
               </p>
             </div>
           )}

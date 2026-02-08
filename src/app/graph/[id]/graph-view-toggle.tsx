@@ -10,7 +10,8 @@ import SimpleTreeView, {
 } from "./simple-tree-view";
 import SearchInput from "./search-input";
 import { searchPersons } from "@/lib/search";
-import type { Person, Relationship } from "@/types/database";
+import type { Person, Relationship, MemberRole } from "@/types/database";
+import { canEdit } from "@/lib/roles";
 
 type ViewMode = "tree" | "list";
 type TreeViewMode = "full" | "ancestors" | "descendants";
@@ -80,7 +81,7 @@ interface GraphViewToggleProps {
   graphId: string;
   persons: Person[];
   relationships: Relationship[];
-  isAdmin: boolean;
+  role: MemberRole;
   storyCountMap?: Record<string, number>;
 }
 
@@ -88,7 +89,7 @@ export default function GraphViewToggle({
   graphId,
   persons,
   relationships,
-  isAdmin,
+  role,
   storyCountMap,
 }: GraphViewToggleProps) {
   const [view, setView] = useState<ViewMode>("tree");
@@ -347,7 +348,7 @@ export default function GraphViewToggle({
             graphId={graphId}
             initialPersons={persons}
             initialRelationships={relationships}
-            isAdmin={isAdmin}
+            isEditor={canEdit(role)}
             searchQuery={searchQuery}
             storyCountMap={storyCountMap}
           />

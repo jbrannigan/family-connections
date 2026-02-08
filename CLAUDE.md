@@ -23,7 +23,8 @@
 
 ```
 family_graphs: id (uuid PK), name, owner_id (FK auth.users), invite_code (unique, 8-char), created_at
-memberships: user_id (FK auth.users), graph_id (FK family_graphs), role ('admin'|'member'), created_at — PK(user_id, graph_id)
+memberships: user_id (FK auth.users), graph_id (FK family_graphs), role ('owner'|'editor'|'contributor'|'viewer'), created_at — PK(user_id, graph_id)
+invite_links: id (uuid PK), graph_id (FK), token (unique), role (member_role), created_by (FK auth.users), label, created_at
 persons: id (uuid PK), graph_id (FK), display_name, given_name, nickname, preferred_name, avatar_url, pronouns, birth_date (text), death_date (text), birth_location, is_incomplete (bool), notes, created_by, created_at, updated_at
 relationships: id (uuid PK), graph_id (FK), person_a (FK persons), person_b (FK persons), type (text), start_date (text), end_date (text), created_by, created_at — UNIQUE(graph_id, person_a, person_b, type)
 stories: id (uuid PK), graph_id (FK), person_id (FK persons), content, is_fun_fact (bool), author_id, created_at
@@ -36,8 +37,25 @@ profiles: id (uuid PK, FK auth.users), display_name, avatar_url
 - Parent types: `biological_parent`, `adoptive_parent`, `step_parent` — person_a is parent, person_b is child
 - Spouse types: `spouse`, `ex_spouse`, `partner` — bidirectional
 
+### Role System
+Four-tier permission model: Owner > Editor > Contributor > Viewer
+- **Owner**: Full control — import, export, manage members, delete graph
+- **Editor**: Can edit persons, relationships, stories; can create invite links
+- **Contributor**: Can add/edit/delete own stories; read-only on tree structure
+- **Viewer**: Read-only — browse tree, read stories, search
+
+Permission utilities in `src/lib/roles.ts`: `canEdit()`, `canAddStories()`, `canImport()`, `canExport()`, `canInvite()`, `canManageMembers()`, etc.
+
+Legacy roles `admin`/`member` are mapped via `normalizeRole()`: admin → owner, member → viewer.
+
+### Guest Mode
+Client-side read-only toggle for Owners/Editors to safely share their device at reunions. When active, all edit/delete/import/export controls are hidden. A 4-digit PIN (SHA-256 hashed, stored in `localStorage` scoped per user) is required to exit. Implemented via `GuestModeProvider` React context in `src/lib/guest-mode.tsx`. This is a UI safety net only — server-side RLS remains the security boundary.
+
+### Invite Links
+Shareable URLs at `/join/[token]` with role baked in. The `invite_links` table stores token → role mappings. Owners and Editors can generate links via the Invite modal on the graph page. QR codes are rendered using the `qrcode` npm package. The old invite code flow (`/dashboard/join`) still works as a fallback (joins as Viewer).
+
 ### RLS Policies
-All tables use RLS. Access requires membership in the graph. Bootstrap policy on `memberships` allows INSERT for graph owners. SELECT policies on `persons` and `relationships` use `EXISTS (SELECT 1 FROM memberships WHERE ...)` to avoid recursion.
+All tables use RLS. Access requires membership in the graph. Bootstrap policy on `memberships` allows INSERT for graph owners. SELECT policies on `persons` and `relationships` use `EXISTS (SELECT 1 FROM memberships WHERE ...)` to avoid recursion. Write policies check for `role IN ('owner', 'editor')` for persons/relationships, and `role IN ('owner', 'editor', 'contributor')` for stories.
 
 ## File Structure
 
