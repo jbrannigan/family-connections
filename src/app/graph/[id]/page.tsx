@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import GraphViewToggle from "./graph-view-toggle";
 import ExportButton from "./export-button";
+import { canExport, canImport, getRoleLabel } from "@/lib/roles";
+import type { MemberRole } from "@/types/database";
 
 export default async function GraphPage({
   params,
@@ -36,6 +38,8 @@ export default async function GraphPage({
 
   if (!membership) redirect("/dashboard");
 
+  const role = membership.role as MemberRole;
+
   // Fetch persons
   const { data: persons } = await supabase
     .from("persons")
@@ -59,8 +63,6 @@ export default async function GraphPage({
   for (const row of storyRows ?? []) {
     storyCountMap[row.person_id] = (storyCountMap[row.person_id] ?? 0) + 1;
   }
-
-  const isAdmin = membership.role === "admin";
 
   return (
     <div className="min-h-screen bg-[#0a1410] text-white">
@@ -99,8 +101,8 @@ export default async function GraphPage({
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && <ExportButton graphId={id} />}
-            {isAdmin && (
+            {canExport(role) && <ExportButton graphId={id} />}
+            {canImport(role) && (
               <Link
                 href={`/graph/${id}/import`}
                 className="rounded-xl border border-white/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-white/5"
@@ -108,11 +110,9 @@ export default async function GraphPage({
                 Import TreeDown
               </Link>
             )}
-            {isAdmin && (
-              <span className="rounded-full bg-[#7fdb9a]/10 px-3 py-1 text-xs font-semibold text-[#7fdb9a]">
-                Admin
-              </span>
-            )}
+            <span className="rounded-full bg-[#7fdb9a]/10 px-3 py-1 text-xs font-semibold text-[#7fdb9a]">
+              {getRoleLabel(role)}
+            </span>
           </div>
         </div>
 
@@ -120,7 +120,7 @@ export default async function GraphPage({
           graphId={id}
           persons={persons ?? []}
           relationships={relationships ?? []}
-          isAdmin={isAdmin}
+          role={role}
           storyCountMap={storyCountMap}
         />
       </main>

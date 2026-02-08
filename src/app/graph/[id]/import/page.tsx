@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import ImportForm from "./import-form";
+import { canImport } from "@/lib/roles";
 
 export default async function ImportPage({
   params,
@@ -25,7 +26,7 @@ export default async function ImportPage({
 
   if (!graph) redirect("/dashboard");
 
-  // Check membership — admin only
+  // Check membership — owner only
   const { data: membership } = await supabase
     .from("memberships")
     .select("role")
@@ -33,7 +34,7 @@ export default async function ImportPage({
     .eq("graph_id", id)
     .single();
 
-  if (!membership || membership.role !== "admin") redirect(`/graph/${id}`);
+  if (!membership || !canImport(membership.role)) redirect(`/graph/${id}`);
 
   return (
     <div className="min-h-screen bg-[#0a1410] text-white">

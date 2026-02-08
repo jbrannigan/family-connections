@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { normalizeDate } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
+import { canEdit, canAddStories } from "@/lib/roles";
 
 export async function updatePerson(
   graphId: string,
@@ -16,7 +17,7 @@ export async function updatePerson(
 
   if (!user) throw new Error("Not authenticated");
 
-  // Verify admin membership
+  // Verify editor or owner membership
   const { data: membership } = await supabase
     .from("memberships")
     .select("role")
@@ -24,8 +25,8 @@ export async function updatePerson(
     .eq("graph_id", graphId)
     .single();
 
-  if (!membership || membership.role !== "admin") {
-    throw new Error("Admin access required");
+  if (!membership || !canEdit(membership.role)) {
+    throw new Error("Editor access required");
   }
 
   // Extract and validate fields
@@ -90,7 +91,7 @@ export async function createStory(
 
   if (!user) throw new Error("Not authenticated");
 
-  // Verify membership (any member can add stories)
+  // Verify membership (contributor and above can add stories)
   const { data: membership } = await supabase
     .from("memberships")
     .select("role")
@@ -98,7 +99,9 @@ export async function createStory(
     .eq("graph_id", graphId)
     .single();
 
-  if (!membership) throw new Error("Not a member of this graph");
+  if (!membership || !canAddStories(membership.role)) {
+    throw new Error("Contributor access required to add stories");
+  }
 
   const content = (formData.get("content") as string)?.trim();
   if (!content) throw new Error("Story content is required");

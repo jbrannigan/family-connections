@@ -40,14 +40,14 @@ export default function PersonList({
   graphId,
   initialPersons,
   initialRelationships,
-  isAdmin,
+  isEditor,
   searchQuery = "",
   storyCountMap,
 }: {
   graphId: string;
   initialPersons: Person[];
   initialRelationships: Relationship[];
-  isAdmin: boolean;
+  isEditor: boolean;
   searchQuery?: string;
   storyCountMap?: Record<string, number>;
 }) {
@@ -334,7 +334,7 @@ export default function PersonList({
                 )}
 
                 {/* Add Relationship */}
-                {isAdmin && !isAddingRel && otherPersons.length > 0 && (
+                {isEditor && !isAddingRel && otherPersons.length > 0 && (
                   <button
                     onClick={() => {
                       setAddingRelFor(person.id);
@@ -417,9 +417,9 @@ export default function PersonList({
         </div>
       )}
 
-      {!isAdmin && persons.length > 0 && (
+      {!isEditor && persons.length > 0 && (
         <p className="mt-4 text-center text-sm text-white/30">
-          Contact an admin to edit or remove family members.
+          Contact an editor or owner to edit or remove family members.
         </p>
       )}
     </div>
