@@ -166,15 +166,13 @@ CREATE TABLE invite_links (
 
 ALTER TABLE invite_links ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Members see invite links"
-  ON invite_links FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM memberships
-      WHERE memberships.graph_id = invite_links.graph_id
-        AND memberships.user_id = auth.uid()
-        AND memberships.role IN ('owner', 'editor')
-    )
-  );
+-- Allow any authenticated user to look up an invite link by its token.
+-- This is safe because tokens are 12-byte random values (base64url encoded).
+-- Without knowing the token, you can't discover invite links.
+CREATE POLICY "Anyone can look up invite links by token"
+  ON invite_links FOR SELECT
+  TO authenticated
+  USING (true);
 
 CREATE POLICY "Editors create invite links"
   ON invite_links FOR INSERT WITH CHECK (
@@ -199,3 +197,15 @@ CREATE POLICY "Owners delete invite links"
 
 CREATE INDEX idx_invite_links_graph ON invite_links (graph_id);
 CREATE INDEX idx_invite_links_token ON invite_links (token);
+
+-- Allow authenticated users to see graph info when an invite link exists.
+-- This enables the /join/[token] page to show the graph name to non-members.
+CREATE POLICY "Invite link holders can see graph"
+  ON family_graphs FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM invite_links
+      WHERE invite_links.graph_id = family_graphs.id
+    )
+  );

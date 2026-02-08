@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import GraphViewToggle from "./graph-view-toggle";
 import ExportButton from "./export-button";
-import { canExport, canImport, getRoleLabel } from "@/lib/roles";
+import { canExport, canImport, canInvite, getRoleLabel } from "@/lib/roles";
+import InviteButton from "./invite-button";
 import type { MemberRole } from "@/types/database";
 
 export default async function GraphPage({
@@ -93,14 +94,15 @@ export default async function GraphPage({
         <div className="mb-8 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">{graph.name}</h1>
-            <p className="mt-1 text-sm text-white/40">
-              Invite code:{" "}
-              <code className="rounded bg-white/10 px-2 py-0.5 font-mono text-[#7fdb9a]">
-                {graph.invite_code}
-              </code>
-            </p>
           </div>
           <div className="flex items-center gap-3">
+            {canInvite(role) && (
+              <InviteButton
+                graphId={id}
+                graphName={graph.name}
+                role={role}
+              />
+            )}
             {canExport(role) && <ExportButton graphId={id} />}
             {canImport(role) && (
               <Link
