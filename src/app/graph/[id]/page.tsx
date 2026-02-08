@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import GraphViewToggle from "./graph-view-toggle";
+import ExportButton from "./export-button";
 
 export default async function GraphPage({
   params,
@@ -98,6 +99,7 @@ export default async function GraphPage({
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {isAdmin && <ExportButton graphId={id} />}
             {isAdmin && (
               <Link
                 href={`/graph/${id}/import`}

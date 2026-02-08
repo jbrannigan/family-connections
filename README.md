@@ -15,6 +15,7 @@ Discover how your family is connected. A full-stack family relationship app with
 - **Stories & Fun Facts** — add, edit, and delete stories on any person; fun fact toggle, author attribution, and relative timestamps
 - **Authentication** — password-based sign-in via Supabase Auth
 - **Collaboration** — invite family members to contribute via invite codes
+- **Archival Export** — download your family tree as a human-readable plain-text archive (.txt) or structured JSON (.json); admin-only
 - **TreeDown Import** — bulk import family trees from indentation-based text format with gender-based surname inference
 
 ## Tech Stack
