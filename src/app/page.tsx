@@ -32,6 +32,16 @@ export default function LandingPage() {
           </Link>
         </div>
 
+        <p className="text-sm text-white/40">
+          New here? Read the{" "}
+          <Link
+            href="/guide"
+            className="text-[#7fdb9a] hover:underline"
+          >
+            User Guide
+          </Link>
+        </p>
+
         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
           <Feature
             icon="📱"
