@@ -7,6 +7,22 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-07
+
+### Added
+- **Enhanced Tree Visualization** — rich nodes, layout options, and structured name data (Feature 010, PRs #7–#9)
+- Person name columns: `given_name`, `nickname`, `preferred_name`, `avatar_url` with data migration from existing `display_name` values (PR #7)
+- Edit UI for new name fields on person detail page (3-column grid: Given Name, Nickname, Preferred Name) (PR #7)
+- `name-utils.ts` — `parseDisplayName()` and `getDisplayParts()` utilities with 16 unit tests (PR #7)
+- Tree layout orientation toggle: **Vertical** (top-down) and **Horizontal** (left-right) with localStorage persistence (PR #8)
+- Tree connection style toggle: **Curved** (Bézier) and **Right-angle** (orthogonal step) for both orientations (PR #8)
+- Smart back button on person detail page — uses browser history when navigating from graph, direct link otherwise (PR #8)
+- Rich detailed tree nodes: multi-line content with primary name, nickname, surname, lifespan dates, birth location (PR #9)
+- Pronoun-based avatar silhouettes (he/him, she/her, they/them) as SVG placeholders (PR #9)
+- Compact/Detailed node style toggle — compact shows single-line name, detailed shows full person info (PR #9)
+- Couple nodes in detailed mode split left/right with divider and scaled-down person info (PR #9)
+- All tree settings (orientation, connections, node style) persist to localStorage (PR #9)
+
 ## [0.4.0] - 2026-02-07
 
 ### Added

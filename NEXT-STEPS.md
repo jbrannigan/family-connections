@@ -85,8 +85,13 @@
 
 ## Priority 4: Future Enhancements
 
-### Advanced Tree Visualization
-- [ ] Horizontal layout option
+### Advanced Tree Visualization ✅ (v0.5.0)
+- [x] Horizontal layout option
+- [x] Vertical layout option (top-down, new default)
+- [x] Connection style toggle (curved / right-angle)
+- [x] Rich detailed nodes (name parts, dates, location, avatar silhouettes)
+- [x] Compact/detailed node style toggle
+- [x] Structured person name fields (given_name, nickname, preferred_name)
 - [ ] Collapse/expand subtrees
 - [ ] Highlight search results
 - [ ] Different color themes
