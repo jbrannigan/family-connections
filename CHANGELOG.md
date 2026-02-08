@@ -7,6 +7,12 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-02-07
+
+### Fixed
+- **Hydration mismatch** — tree settings (orientation, connection style, node style) no longer cause a React hydration error when non-default values are saved in localStorage (PR #13)
+- Replaced `useState` + `useEffect` pattern with `useSyncExternalStore` for SSR-safe localStorage sync with cached snapshots
+
 ## [0.8.0] - 2026-02-07
 
 ### Added
