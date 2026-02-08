@@ -58,6 +58,10 @@ export async function updatePerson(
     .from("persons")
     .update({
       display_name: displayName,
+      given_name: (formData.get("given_name") as string)?.trim() || null,
+      nickname: (formData.get("nickname") as string)?.trim() || null,
+      preferred_name:
+        (formData.get("preferred_name") as string)?.trim() || null,
       pronouns: (formData.get("pronouns") as string)?.trim() || null,
       birth_date: birthDate,
       death_date: deathDate,

@@ -12,6 +12,10 @@ export interface Person {
   id: string;
   graph_id: string;
   display_name: string;
+  given_name: string | null;
+  nickname: string | null;
+  preferred_name: string | null;
+  avatar_url: string | null;
   pronouns: string | null;
   birth_date: string | null;
   death_date: string | null;
