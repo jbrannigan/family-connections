@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
+import React, { useEffect, useRef, useState, useImperativeHandle, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Person, Relationship } from "@/types/database";
 import {
@@ -10,6 +10,14 @@ import {
   type TreeDisplayNode,
 } from "@/lib/dtree-transform";
 import { getUnionTypeLabel } from "@/lib/union-utils";
+import {
+  findParentNode,
+  findFirstChild,
+  findNextSibling,
+  keyToAction,
+  buildNodeMap,
+  type NodeMap,
+} from "@/lib/tree-keyboard-nav";
 
 export type TreeOrientation = "vertical" | "horizontal";
 export type ConnectionStyle = "curved" | "right-angle";
@@ -114,6 +122,17 @@ const SimpleTreeView = React.forwardRef<
   const nodePositionsRef = useRef<Map<string, { x: number; y: number }>>(
     new Map(),
   );
+
+  // Keyboard navigation state
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const focusedNodeIdRef = useRef<string | null>(null);
+  const nodeMapRef = useRef<NodeMap>(new Map());
+  const d3RootRef = useRef<any>(null);
+
+  // Keep focusedNodeIdRef in sync with state
+  useEffect(() => {
+    focusedNodeIdRef.current = focusedNodeId;
+  }, [focusedNodeId]);
 
   // Expose focusOnPerson method via ref
   useImperativeHandle(
@@ -256,6 +275,12 @@ const SimpleTreeView = React.forwardRef<
           .separation(() => 1.2);
 
         treeLayout(root);
+
+        // Store D3 root and node map for keyboard navigation
+        d3RootRef.current = root;
+        const nMap: NodeMap = buildNodeMap(root as any);
+        nodeMapRef.current = nMap;
+        setFocusedNodeId(null);
 
         // Build person-to-position lookup for focusOnPerson
         const posMap = new Map<string, { x: number; y: number }>();
@@ -444,23 +469,33 @@ const SimpleTreeView = React.forwardRef<
           });
         }
 
-        // Add hover effects
-        nodes.on("mouseover", function (this: any) {
-          d3.select(this)
-            .select("rect")
-            .attr("stroke-width", 2.5)
-            .attr("stroke", "#a0f0b0");
+        // Add hover effects (respecting focused state)
+        nodes.on("mouseover", function (this: any, _event: unknown, d: any) {
+          const isFocused = d.data.id === focusedNodeIdRef.current;
+          if (!isFocused) {
+            d3.select(this)
+              .select("rect")
+              .attr("stroke-width", 2.5)
+              .attr("stroke", "#a0f0b0");
+          }
         });
 
-        nodes.on("mouseout", function (this: any) {
+        nodes.on("mouseout", function (this: any, _event: unknown, d: any) {
+          const isFocused = d.data.id === focusedNodeIdRef.current;
           d3.select(this)
             .select("rect")
-            .attr("stroke-width", 1.5)
-            .attr("stroke", "#7fdb9a");
+            .attr("stroke-width", isFocused ? 3 : 1.5)
+            .attr("stroke", isFocused ? "#ffffff" : "#7fdb9a");
         });
 
-        // Click to navigate
+        // Single click to focus node
         nodes.on("click", (_event: unknown, d: unknown) => {
+          const node = d as { data: TreeDisplayNode };
+          setFocusedNodeId(node.data.id);
+        });
+
+        // Double click to navigate to person detail
+        nodes.on("dblclick", (_event: unknown, d: unknown) => {
           const node = d as { data: TreeDisplayNode };
           if (node.data.personIds && node.data.personIds.length > 0) {
             router.push(
@@ -498,18 +533,156 @@ const SimpleTreeView = React.forwardRef<
     focusPersonId,
   ]);
 
+  // ── Pan to focused node helper ────────────────────────
+  const panToNode = useCallback(
+    (nodeId: string) => {
+      const d3 = (window as any).d3;
+      if (!d3 || !zoomRef.current || !svgSelectionRef.current) return;
+
+      const node = nodeMapRef.current.get(nodeId);
+      if (!node) return;
+
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const svgWidth = rect.width || 800;
+      const svgHeight = rect.height || 600;
+      const targetScale = 1.2;
+
+      const nx = (node as any).x as number;
+      const ny = (node as any).y as number;
+
+      let targetX: number;
+      let targetY: number;
+      if (orientation === "vertical") {
+        targetX = svgWidth / 2 - nx * targetScale;
+        targetY = svgHeight / 2 - ny * targetScale;
+      } else {
+        targetX = svgWidth / 2 - ny * targetScale;
+        targetY = svgHeight / 2 - nx * targetScale;
+      }
+
+      const transform = d3.zoomIdentity
+        .translate(targetX, targetY)
+        .scale(targetScale);
+
+      svgSelectionRef.current
+        .transition()
+        .duration(300)
+        .call(zoomRef.current.transform, transform);
+    },
+    [orientation],
+  );
+
+  // ── Update focus visual + pan when focusedNodeId changes ──
+  useEffect(() => {
+    const d3 = (window as any).d3;
+    if (!d3 || !svgSelectionRef.current) return;
+
+    const g = svgSelectionRef.current.select("g");
+    if (g.empty()) return;
+
+    // Reset all nodes to default style
+    g.selectAll(".node rect")
+      .attr("stroke", "#7fdb9a")
+      .attr("stroke-width", 1.5);
+
+    // Apply focus style and pan
+    if (focusedNodeId) {
+      g.selectAll(".node")
+        .filter((d: any) => d.data.id === focusedNodeId)
+        .select("rect")
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 3);
+
+      panToNode(focusedNodeId);
+    }
+  }, [focusedNodeId, panToNode]);
+
+  // ── Keyboard event handler ────────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't interfere with form inputs
+      const tag = (document.activeElement?.tagName ?? "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+      const action = keyToAction(e.key, orientation);
+      if (!action) return;
+
+      e.preventDefault();
+
+      if (action === "clearFocus") {
+        setFocusedNodeId(null);
+        return;
+      }
+
+      if (action === "activate") {
+        const current = focusedNodeIdRef.current;
+        if (current) {
+          const node = nodeMapRef.current.get(current);
+          const pIds = node?.data.personIds;
+          if (pIds && pIds.length > 0) {
+            router.push(
+              `/graph/${graphId}/person/${pIds[0]}`,
+            );
+          }
+        }
+        return;
+      }
+
+      // If no node is focused, focus the root
+      const current = focusedNodeIdRef.current;
+      if (!current) {
+        const rootId = d3RootRef.current?.data?.id;
+        if (rootId) setFocusedNodeId(rootId);
+        return;
+      }
+
+      let nextId: string | null = null;
+      const nMap = nodeMapRef.current;
+
+      switch (action) {
+        case "parent":
+          nextId = findParentNode(nMap, current);
+          break;
+        case "child":
+          nextId = findFirstChild(nMap, current);
+          break;
+        case "prevSibling":
+          nextId = findNextSibling(nMap, current, -1);
+          break;
+        case "nextSibling":
+          nextId = findNextSibling(nMap, current, 1);
+          break;
+      }
+
+      if (nextId) {
+        setFocusedNodeId(nextId);
+      }
+    }
+
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, [orientation, graphId, router]);
+
   return (
     <div className="relative w-full h-full min-h-[400px] sm:min-h-[600px] bg-[#0a1410]">
       {!isLoading && !error && (
         <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20">
-          {nodeCount} family units • Scroll to zoom, drag to pan
+          {nodeCount} family units • Scroll to zoom, drag to pan • Arrow keys to navigate, Enter to open
         </div>
       )}
 
       <div
         ref={containerRef}
-        className="w-full h-full"
+        className="w-full h-full focus:outline-none"
         style={{ minHeight: "600px" }}
+        tabIndex={0}
+        role="tree"
+        aria-label="Family tree. Use arrow keys to navigate between family members, Enter to open."
       />
 
       {isLoading && (
