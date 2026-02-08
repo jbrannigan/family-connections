@@ -7,6 +7,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-02-07
+
+### Added
+- **Archival Export** — download your family tree as a plain-text archive or structured JSON (Feature 008, PR #11)
+- Export dropdown button (admin-only) on graph page with two download formats
+- Plain-text archive (.txt): human-readable narrative with Unicode box-drawing header, person facts, unions, children, parents, notes, and quoted stories with author attribution — sorted alphabetically
+- JSON export (.json): structured data with all persons, relationships, stories, graph metadata, and summary counts for programmatic use or future re-import
+- API route `GET /api/graph/[id]/export?format=txt|json` with admin-only auth checks
+- `ExportButton` client component with dropdown menu and browser file download via blob URL
+- `archive-export.ts` — `generateArchiveText()` and `generateArchiveJSON()` with 21 unit tests
+
 ## [0.6.0] - 2026-02-07
 
 ### Added

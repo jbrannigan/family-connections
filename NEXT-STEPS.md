@@ -71,6 +71,8 @@
 - [ ] Story timeline view
 
 ### Export & Sharing
+- [x] Plain-text archive export (.txt) (v0.7.0)
+- [x] JSON structured export (.json) (v0.7.0)
 - [ ] Export tree as PNG/SVG image
 - [ ] Export to GEDCOM format
 - [ ] Share read-only link
