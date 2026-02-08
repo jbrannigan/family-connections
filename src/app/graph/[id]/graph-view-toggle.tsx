@@ -153,11 +153,11 @@ export default function GraphViewToggle({
   return (
     <div>
       {/* Toolbar: toggle + search */}
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3 sm:mb-6 sm:gap-4">
         <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
           <button
             onClick={() => setView("tree")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition sm:px-4 sm:py-1.5 ${
               view === "tree"
                 ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                 : "text-white/40 hover:text-white/60"
@@ -167,7 +167,7 @@ export default function GraphViewToggle({
           </button>
           <button
             onClick={() => setView("list")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition sm:px-4 sm:py-1.5 ${
               view === "list"
                 ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                 : "text-white/40 hover:text-white/60"
@@ -177,7 +177,7 @@ export default function GraphViewToggle({
           </button>
         </div>
 
-        <div className="w-full max-w-sm sm:flex-1 sm:w-auto">
+        <div className="order-last w-full sm:order-none sm:w-auto sm:flex-1 sm:max-w-sm">
           <SearchInput
             persons={persons}
             searchQuery={searchQuery}
@@ -193,12 +193,12 @@ export default function GraphViewToggle({
 
         {/* Tree settings — only show in tree view */}
         {view === "tree" && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* Tree view mode toggle */}
-            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+            <div className="flex items-center gap-0.5 rounded-xl bg-white/5 p-1 sm:gap-1">
               <button
                 onClick={() => handleTreeViewModeChange("full")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeViewMode === "full"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
@@ -209,103 +209,111 @@ export default function GraphViewToggle({
               </button>
               <button
                 onClick={() => handleTreeViewModeChange("ancestors")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeViewMode === "ancestors"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Show ancestors of a person"
               >
-                Ancestors
+                <span className="sm:hidden">Anc</span>
+                <span className="hidden sm:inline">Ancestors</span>
               </button>
               <button
                 onClick={() => handleTreeViewModeChange("descendants")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeViewMode === "descendants"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Show descendants of a person"
               >
-                Descendants
+                <span className="sm:hidden">Des</span>
+                <span className="hidden sm:inline">Descendants</span>
               </button>
             </div>
 
             {/* Orientation toggle */}
-            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+            <div className="flex items-center gap-0.5 rounded-xl bg-white/5 p-1 sm:gap-1">
               <button
                 onClick={() => updateTreeSettings({ orientation: "vertical" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.orientation === "vertical"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Vertical layout (top-down)"
               >
-                ↕ Vertical
+                <span className="sm:hidden">↕</span>
+                <span className="hidden sm:inline">↕ Vertical</span>
               </button>
               <button
                 onClick={() => updateTreeSettings({ orientation: "horizontal" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.orientation === "horizontal"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Horizontal layout (left-right)"
               >
-                ↔ Horizontal
+                <span className="sm:hidden">↔</span>
+                <span className="hidden sm:inline">↔ Horizontal</span>
               </button>
             </div>
 
             {/* Connection style toggle */}
-            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+            <div className="flex items-center gap-0.5 rounded-xl bg-white/5 p-1 sm:gap-1">
               <button
                 onClick={() => updateTreeSettings({ connectionStyle: "curved" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.connectionStyle === "curved"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Curved connections"
               >
-                ⌒ Curved
+                <span className="sm:hidden">⌒</span>
+                <span className="hidden sm:inline">⌒ Curved</span>
               </button>
               <button
                 onClick={() => updateTreeSettings({ connectionStyle: "right-angle" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.connectionStyle === "right-angle"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Right-angle connections"
               >
-                ⊾ Right Angle
+                <span className="sm:hidden">⊾</span>
+                <span className="hidden sm:inline">⊾ Right Angle</span>
               </button>
             </div>
 
             {/* Node style toggle */}
-            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+            <div className="flex items-center gap-0.5 rounded-xl bg-white/5 p-1 sm:gap-1">
               <button
                 onClick={() => updateTreeSettings({ nodeStyle: "compact" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.nodeStyle === "compact"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Compact nodes (name only)"
               >
-                ▬ Compact
+                <span className="sm:hidden">▬</span>
+                <span className="hidden sm:inline">▬ Compact</span>
               </button>
               <button
                 onClick={() => updateTreeSettings({ nodeStyle: "detailed" })}
-                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                className={`rounded-lg px-2.5 py-2 text-xs font-medium transition sm:px-3 sm:py-1.5 ${
                   treeSettings.nodeStyle === "detailed"
                     ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
                     : "text-white/40 hover:text-white/60"
                 }`}
                 title="Detailed nodes (name, dates, location, avatar)"
               >
-                ▣ Detailed
+                <span className="sm:hidden">▣</span>
+                <span className="hidden sm:inline">▣ Detailed</span>
               </button>
             </div>
           </div>
@@ -321,7 +329,7 @@ export default function GraphViewToggle({
           </span>
           <button
             onClick={clearFocusPerson}
-            className="rounded-lg px-2 py-1 text-xs text-white/40 transition hover:bg-white/10 hover:text-white/60"
+            className="rounded-lg px-2.5 py-2 text-xs text-white/40 transition hover:bg-white/10 hover:text-white/60 sm:px-2 sm:py-1"
             title="Clear and return to full tree"
           >
             ✕

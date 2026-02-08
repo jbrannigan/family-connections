@@ -221,7 +221,7 @@ export default function PersonList({
                 className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
               />
             </div>
-            <div className="w-40">
+            <div className="w-full sm:w-40">
               <label
                 htmlFor="person-pronouns"
                 className="mb-1 block text-sm text-white/60"

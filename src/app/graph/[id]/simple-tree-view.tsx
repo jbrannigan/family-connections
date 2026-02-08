@@ -499,7 +499,7 @@ const SimpleTreeView = React.forwardRef<
   ]);
 
   return (
-    <div className="relative w-full h-full min-h-[600px] bg-[#0a1410]">
+    <div className="relative w-full h-full min-h-[400px] sm:min-h-[600px] bg-[#0a1410]">
       {!isLoading && !error && (
         <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20">
           {nodeCount} family units • Scroll to zoom, drag to pan

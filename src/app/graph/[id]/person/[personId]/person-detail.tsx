@@ -157,9 +157,9 @@ export default function PersonDetail({
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{person.display_name}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold sm:text-3xl">{person.display_name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-3">
               {person.preferred_name && (
                 <span className="text-sm text-[#7fdb9a]/70">
@@ -325,9 +325,9 @@ export default function PersonDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Edit Person</h1>
-        <div className="flex gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold sm:text-3xl">Edit Person</h1>
+        <div className="flex gap-2 sm:gap-3">
           <button
             onClick={handleCancel}
             disabled={saving}

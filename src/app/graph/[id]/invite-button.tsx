@@ -21,7 +21,7 @@ export default function InviteButton({
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-1.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90"
+        className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-3 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 sm:px-4 sm:py-1.5"
       >
         Invite
       </button>
