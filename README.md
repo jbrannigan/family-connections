@@ -17,6 +17,7 @@ Discover how your family is connected. A full-stack family relationship app with
 - **Collaboration** — invite family members to contribute via invite codes
 - **Archival Export** — download your family tree as a human-readable plain-text archive (.txt) or structured JSON (.json); admin-only
 - **TreeDown Import** — bulk import family trees from indentation-based text format with gender-based surname inference
+- **User Guide** — in-app guide at `/guide` covering all features for non-technical family members
 
 ## Tech Stack
 

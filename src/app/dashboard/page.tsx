@@ -39,6 +39,12 @@ export default async function DashboardPage() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              href="/guide"
+              className="text-sm text-white/40 transition hover:text-white/60"
+            >
+              Guide
+            </Link>
             <span className="text-sm text-white/50">{user.email}</span>
             <SignOutButton />
           </div>

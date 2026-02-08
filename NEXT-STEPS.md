@@ -122,16 +122,18 @@
 - [ ] Optimize relationship queries
 
 ### Testing
-- [ ] Unit tests for TreeDown parser
-- [ ] E2E tests for critical flows
+- [x] Unit tests for TreeDown parser (12 tests)
+- [x] Unit tests for dtree-transform (20 tests)
+- [x] Unit tests for date-utils, search, union-utils, archive-export (79 tests)
+- [ ] E2E tests for critical flows (Playwright)
 - [ ] Visual regression tests for tree
 
 ### Documentation
 - [x] CLAUDE.md - AI assistant context
 - [x] SETUP.md - Installation guide
 - [x] NEXT-STEPS.md - Roadmap (this file)
+- [x] User guide — in-app at /guide
 - [ ] API documentation
-- [ ] User guide
 
 ---
 
