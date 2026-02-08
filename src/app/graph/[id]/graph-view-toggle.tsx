@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import PersonList from "./person-list";
 import SimpleTreeView, {
   type SimpleTreeViewHandle,
@@ -13,6 +13,7 @@ import { searchPersons } from "@/lib/search";
 import type { Person, Relationship } from "@/types/database";
 
 type ViewMode = "tree" | "list";
+type TreeViewMode = "full" | "ancestors" | "descendants";
 
 interface TreeSettings {
   orientation: TreeOrientation;
@@ -72,6 +73,16 @@ export default function GraphViewToggle({
   // Tree settings with localStorage persistence (lazy init from localStorage)
   const [treeSettings, setTreeSettings] = useState<TreeSettings>(loadTreeSettings);
 
+  // Ephemeral tree view mode — not persisted
+  const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>("full");
+  const [focusPersonId, setFocusPersonId] = useState<string | null>(null);
+
+  // Resolve focus person's display name for the indicator
+  const focusPersonName = useMemo(() => {
+    if (!focusPersonId) return null;
+    return persons.find((p) => p.id === focusPersonId)?.display_name ?? null;
+  }, [focusPersonId, persons]);
+
   function updateTreeSettings(update: Partial<TreeSettings>) {
     setTreeSettings((prev) => {
       const next = { ...prev, ...update };
@@ -80,15 +91,33 @@ export default function GraphViewToggle({
     });
   }
 
+  function handleTreeViewModeChange(mode: TreeViewMode) {
+    setTreeViewMode(mode);
+    if (mode === "full") {
+      setFocusPersonId(null);
+    }
+  }
+
+  function clearFocusPerson() {
+    setFocusPersonId(null);
+    setTreeViewMode("full");
+  }
+
   const filteredResults = searchPersons(persons, searchQuery);
 
   const handlePersonSelect = useCallback(
     (personId: string) => {
       if (view === "tree") {
-        treeRef.current?.focusOnPerson(personId);
+        if (treeViewMode === "full") {
+          // Existing behavior: pan to person
+          treeRef.current?.focusOnPerson(personId);
+        } else {
+          // Ancestor/Descendant mode: set as focus person
+          setFocusPersonId(personId);
+        }
       }
     },
-    [view],
+    [view, treeViewMode],
   );
 
   return (
@@ -134,7 +163,44 @@ export default function GraphViewToggle({
 
         {/* Tree settings — only show in tree view */}
         {view === "tree" && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Tree view mode toggle */}
+            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+              <button
+                onClick={() => handleTreeViewModeChange("full")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  treeViewMode === "full"
+                    ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+                title="Show full tree"
+              >
+                Full
+              </button>
+              <button
+                onClick={() => handleTreeViewModeChange("ancestors")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  treeViewMode === "ancestors"
+                    ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+                title="Show ancestors of a person"
+              >
+                Ancestors
+              </button>
+              <button
+                onClick={() => handleTreeViewModeChange("descendants")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  treeViewMode === "descendants"
+                    ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+                title="Show descendants of a person"
+              >
+                Descendants
+              </button>
+            </div>
+
             {/* Orientation toggle */}
             <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
               <button
@@ -216,6 +282,23 @@ export default function GraphViewToggle({
         )}
       </div>
 
+      {/* Focus person indicator */}
+      {view === "tree" && treeViewMode !== "full" && focusPersonName && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="rounded-lg bg-[#7fdb9a]/10 px-3 py-1.5 text-sm text-[#7fdb9a]">
+            {treeViewMode === "ancestors" ? "Ancestors" : "Descendants"} of{" "}
+            <span className="font-semibold">{focusPersonName}</span>
+          </span>
+          <button
+            onClick={clearFocusPerson}
+            className="rounded-lg px-2 py-1 text-xs text-white/40 transition hover:bg-white/10 hover:text-white/60"
+            title="Clear and return to full tree"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Views */}
       {view === "tree" ? (
         <SimpleTreeView
@@ -226,6 +309,8 @@ export default function GraphViewToggle({
           orientation={treeSettings.orientation}
           connectionStyle={treeSettings.connectionStyle}
           nodeStyle={treeSettings.nodeStyle}
+          treeViewMode={treeViewMode}
+          focusPersonId={focusPersonId}
         />
       ) : (
         <div className="mx-auto max-w-5xl">
