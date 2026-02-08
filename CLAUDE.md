@@ -284,3 +284,37 @@ When working with Claude (AI assistant):
 - **Always update CHANGELOG.md** after merging
 - **Ask before making architectural decisions** — present options, let the user choose
 - **Break large features into multiple PRs** — each PR should be reviewable in one sitting
+
+### 8. Resuming Development (New Session Checklist)
+
+When starting a fresh session (e.g., after context window reset), orient yourself before doing anything:
+
+```bash
+# 1. Where are we?
+git branch --show-current           # Should be main unless mid-feature
+git log --oneline -5                # Recent commits
+
+# 2. What version?
+node -p "require('./package.json').version"
+
+# 3. Any in-progress work?
+git status                          # Uncommitted changes?
+git stash list                      # Stashed work?
+gh pr list --author @me             # Open PRs?
+
+# 4. What shipped recently?
+head -40 CHANGELOG.md               # Latest version entry
+
+# 5. What's next?
+cat NEXT-STEPS.md                   # Roadmap with checkboxes
+ls docs/features/                   # Feature docs (check Status field)
+```
+
+**Key files to read for context:**
+- `CLAUDE.md` (this file) — architecture, schema, patterns, workflow
+- `CHANGELOG.md` — what shipped and when
+- `NEXT-STEPS.md` — roadmap with checked/unchecked items
+- `docs/features/*.md` — any doc with `Status: In Progress` is active work
+- `package.json` — current version
+
+**If a feature doc has `Status: In Progress`**, read it fully — it contains the design, scope, and acceptance criteria for whatever was being worked on when the previous session ended.
