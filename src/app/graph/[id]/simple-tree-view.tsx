@@ -7,6 +7,7 @@ import {
   transformToHierarchicalTree,
   type TreeDisplayNode,
 } from "@/lib/dtree-transform";
+import { getUnionTypeLabel } from "@/lib/union-utils";
 
 export type TreeOrientation = "vertical" | "horizontal";
 export type ConnectionStyle = "curved" | "right-angle";
@@ -387,7 +388,10 @@ const SimpleTreeView = React.forwardRef<
           nodes
             .append("text")
             .attr("text-anchor", "middle")
-            .attr("dy", "0.35em")
+            .attr("dy", (d: unknown) => {
+              const node = d as { data: TreeDisplayNode };
+              return node.data.unionType ? "-0.1em" : "0.35em";
+            })
             .attr("fill", "#e0f0e6")
             .attr("font-size", "11px")
             .attr("font-family", "system-ui, sans-serif")
@@ -399,6 +403,30 @@ const SimpleTreeView = React.forwardRef<
                 : name;
             })
             .style("cursor", "pointer");
+
+          // Compact union type indicator
+          nodes.each(function (this: any, d: any) {
+            const node = d as { data: TreeDisplayNode };
+            if (!node.data.unionType) return;
+            const gNode = (window as any).d3.select(this);
+            const unionLabel = getUnionTypeLabel(node.data.unionType);
+            const indicatorColor =
+              node.data.unionType === "ex_spouse"
+                ? "#f87171"
+                : node.data.unionType === "partner"
+                  ? "#60a5fa"
+                  : "#7fdb9a";
+            gNode
+              .append("text")
+              .attr("text-anchor", "middle")
+              .attr("dy", "1.4em")
+              .attr("fill", indicatorColor)
+              .attr("fill-opacity", 0.6)
+              .attr("font-size", "8px")
+              .attr("font-family", "system-ui, sans-serif")
+              .text(unionLabel)
+              .style("cursor", "pointer");
+          });
         }
 
         // Add hover effects
@@ -523,6 +551,37 @@ function renderDetailedNodes(
         .attr("stroke", "#7fdb9a")
         .attr("stroke-width", 0.5)
         .attr("stroke-opacity", 0.4);
+
+      // Union type indicator on divider
+      if (treeNode.unionType) {
+        const unionLabel = getUnionTypeLabel(treeNode.unionType);
+        const indicatorColor =
+          treeNode.unionType === "ex_spouse"
+            ? "#f87171"
+            : treeNode.unionType === "partner"
+              ? "#60a5fa"
+              : "#7fdb9a";
+
+        // Small pill background
+        g.append("rect")
+          .attr("x", -22)
+          .attr("y", dim.height / 2 - 16)
+          .attr("width", 44)
+          .attr("height", 12)
+          .attr("rx", 6)
+          .attr("fill", indicatorColor)
+          .attr("fill-opacity", 0.15);
+
+        g.append("text")
+          .attr("x", 0)
+          .attr("y", dim.height / 2 - 7)
+          .attr("text-anchor", "middle")
+          .attr("fill", indicatorColor)
+          .attr("font-size", "7px")
+          .attr("font-weight", "600")
+          .attr("font-family", "system-ui, sans-serif")
+          .text(unionLabel);
+      }
 
       if (p1) {
         renderHalfPerson(g, p1, dim, "left");

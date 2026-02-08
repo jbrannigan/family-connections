@@ -17,6 +17,7 @@ export interface TreeDisplayNode {
   id: string;
   name: string;
   personIds: string[]; // UUIDs of the 1 or 2 persons represented by this node
+  unionType: string | null; // relationship type for couple nodes: "spouse", "ex_spouse", "partner"
   children: TreeDisplayNode[];
 }
 
@@ -512,6 +513,7 @@ export function transformToHierarchicalTree(
     let nodeName = formatPersonName(person);
     const spouseRel = personSpouse.get(personId);
     const childrenSourceIds: string[] = [personId];
+    let unionType: string | null = null;
 
     if (spouseRel && !processedPersons.has(spouseRel.spouseId)) {
       const spouse = personMap.get(spouseRel.spouseId);
@@ -520,6 +522,7 @@ export function transformToHierarchicalTree(
         const separator = spouseRel.type === "ex_spouse" ? " & " : " & ";
         nodeName += separator + formatPersonName(spouse);
         childrenSourceIds.push(spouseRel.spouseId);
+        unionType = spouseRel.type;
       }
     }
 
@@ -547,6 +550,7 @@ export function transformToHierarchicalTree(
       id: nodeId,
       name: nodeName,
       personIds: childrenSourceIds,
+      unionType,
       children: childNodes,
     };
   }
