@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import GraphViewToggle from "./graph-view-toggle";
-import ExportButton from "./export-button";
-import { canExport, canImport, canInvite, getRoleLabel } from "@/lib/roles";
-import InviteButton from "./invite-button";
+import GraphPageClient from "./graph-page-client";
 import type { MemberRole } from "@/types/database";
 
 export default async function GraphPage({
@@ -66,66 +62,15 @@ export default async function GraphPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#0a1410] text-white">
-      <header className="border-b border-white/10 bg-[#0f1a14]/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] text-lg">
-              🌳
-            </div>
-            <span className="text-lg font-bold text-[#7fdb9a]">
-              Family Connections
-            </span>
-          </Link>
-          <span className="text-sm text-white/50">{user.email}</span>
-        </div>
-      </header>
-
-      <main className="mx-auto px-6 py-12">
-        <div className="mb-2 flex items-center gap-3">
-          <Link
-            href="/dashboard"
-            className="text-sm text-white/40 hover:text-white/60"
-          >
-            &larr; Dashboard
-          </Link>
-        </div>
-
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{graph.name}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {canInvite(role) && (
-              <InviteButton
-                graphId={id}
-                graphName={graph.name}
-                role={role}
-              />
-            )}
-            {canExport(role) && <ExportButton graphId={id} />}
-            {canImport(role) && (
-              <Link
-                href={`/graph/${id}/import`}
-                className="rounded-xl border border-white/20 px-4 py-1.5 text-sm font-semibold transition hover:bg-white/5"
-              >
-                Import TreeDown
-              </Link>
-            )}
-            <span className="rounded-full bg-[#7fdb9a]/10 px-3 py-1 text-xs font-semibold text-[#7fdb9a]">
-              {getRoleLabel(role)}
-            </span>
-          </div>
-        </div>
-
-        <GraphViewToggle
-          graphId={id}
-          persons={persons ?? []}
-          relationships={relationships ?? []}
-          role={role}
-          storyCountMap={storyCountMap}
-        />
-      </main>
-    </div>
+    <GraphPageClient
+      graphId={id}
+      graphName={graph.name}
+      role={role}
+      userId={user.id}
+      userEmail={user.email ?? ""}
+      persons={persons ?? []}
+      relationships={relationships ?? []}
+      storyCountMap={storyCountMap}
+    />
   );
 }
