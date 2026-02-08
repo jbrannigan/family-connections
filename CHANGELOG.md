@@ -7,6 +7,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-02-07
+
+### Added
+- **Ancestor & Descendant View** — focus on a single person's lineage within the tree (Feature 011, PR #12)
+- Tree mode selector in toolbar: Full Tree / Ancestors / Descendants
+- Ancestor view: select a person to see their direct pedigree chart (parents, grandparents, great-grandparents as couple nodes)
+- Descendant view: select a person to see only their descendants branching out below
+- Focus person indicator pill with clear button to return to full tree
+- All existing tree settings (orientation, connection style, node style) work in all view modes
+- Extracted `buildTreeMaps()` shared helper for tree transform functions (refactor, no behavior change)
+- `transformToAncestorTree()` and `transformToDescendantTree()` with 20 unit tests
+
 ## [0.7.0] - 2026-02-07
 
 ### Added

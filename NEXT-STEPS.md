@@ -95,8 +95,8 @@
 - [x] Rich detailed nodes (name parts, dates, location, avatar silhouettes)
 - [x] Compact/detailed node style toggle
 - [x] Structured person name fields (given_name, nickname, preferred_name)
-- [ ] Ancestor view — select a person and view their direct ancestral line as an ascending pedigree chart
-- [ ] Descendant view — select a person and show only their descendants
+- [x] Ancestor view — select a person and view their direct ancestral line as an ascending pedigree chart
+- [x] Descendant view — select a person and show only their descendants
 - [ ] Collapse/expand subtrees
 - [ ] Highlight search results
 - [ ] Different color themes

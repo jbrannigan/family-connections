@@ -1,8 +1,8 @@
 # Feature 011: Ancestor & Descendant View
 
-**Status:** In Progress
+**Status:** Complete
 **Branch:** `feat/011-ancestor-descendant-view`
-**PRs:** (link PR here when created)
+**PRs:** [PR #12](https://github.com/jbrannigan/family-connections/pull/12)
 
 ## Summary
 
