@@ -46,10 +46,10 @@ export default async function PersonPage({
 
   if (!person) redirect(`/graph/${id}`);
 
-  // Fetch all persons in graph (for relationship name resolution)
+  // Fetch all persons in graph (for relationship name resolution + union cards)
   const { data: allPersons } = await supabase
     .from("persons")
-    .select("id, display_name")
+    .select("*")
     .eq("graph_id", id);
 
   // Fetch relationships involving this person

@@ -6,16 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Person, Relationship, RelationshipType } from "@/types/database";
 import { searchPersons } from "@/lib/search";
+import { getUnionLabel } from "@/lib/union-utils";
 import { HighlightedText } from "./search-input";
-
-const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
-  biological_parent: "Parent (biological)",
-  adoptive_parent: "Parent (adoptive)",
-  step_parent: "Step-parent",
-  spouse: "Spouse",
-  ex_spouse: "Ex-spouse",
-  partner: "Partner",
-};
 
 const RELATIONSHIP_TYPES: { value: RelationshipType; label: string }[] = [
   { value: "biological_parent", label: "Parent (biological)" },
@@ -38,11 +30,9 @@ function getDirectionalLabel(
     case "step_parent":
       return isPersonA ? "Step-parent of" : "Step-child of";
     case "spouse":
-      return "Spouse of";
     case "ex_spouse":
-      return "Ex-spouse of";
     case "partner":
-      return "Partner of";
+      return getUnionLabel(type);
   }
 }
 

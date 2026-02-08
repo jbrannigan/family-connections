@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Person, Relationship, StoryWithAuthor } from "@/types/database";
 import { formatDateForDisplay } from "@/lib/date-utils";
+import { resolveUnions, formatUnionDateRange } from "@/lib/union-utils";
+import type { Union } from "@/lib/union-utils";
 import { updatePerson } from "./actions";
 import StorySection from "./story-section";
 
@@ -20,7 +22,7 @@ const RELATIONSHIP_TYPE_LABELS: Record<string, string> = {
 interface PersonDetailProps {
   graphId: string;
   person: Person;
-  allPersons: { id: string; display_name: string }[];
+  allPersons: Person[];
   relationships: Relationship[];
   stories: StoryWithAuthor[];
   isAdmin: boolean;
@@ -29,17 +31,15 @@ interface PersonDetailProps {
 
 interface GroupedRelationships {
   parents: { id: string; name: string; type: string }[];
-  spouses: { id: string; name: string; type: string }[];
   children: { id: string; name: string; type: string }[];
 }
 
 function groupRelationships(
   personId: string,
   relationships: Relationship[],
-  allPersons: { id: string; display_name: string }[],
+  allPersons: Person[],
 ): GroupedRelationships {
   const parents: GroupedRelationships["parents"] = [];
-  const spouses: GroupedRelationships["spouses"] = [];
   const children: GroupedRelationships["children"] = [];
 
   const parentTypes = new Set([
@@ -47,7 +47,6 @@ function groupRelationships(
     "adoptive_parent",
     "step_parent",
   ]);
-  const spouseTypes = new Set(["spouse", "ex_spouse", "partner"]);
 
   for (const rel of relationships) {
     const isA = rel.person_a === personId;
@@ -63,8 +62,6 @@ function groupRelationships(
         // person_b is child → this person IS the child, other is parent
         parents.push({ id: otherId, name, type: rel.type });
       }
-    } else if (spouseTypes.has(rel.type)) {
-      spouses.push({ id: otherId, name, type: rel.type });
     }
   }
 
@@ -72,7 +69,7 @@ function groupRelationships(
   parents.sort((a, b) => a.name.localeCompare(b.name));
   children.sort((a, b) => a.name.localeCompare(b.name));
 
-  return { parents, spouses, children };
+  return { parents, children };
 }
 
 export default function PersonDetail({
@@ -102,6 +99,7 @@ export default function PersonDetail({
   const [error, setError] = useState<string | null>(null);
 
   const grouped = groupRelationships(person.id, relationships, allPersons);
+  const unions = resolveUnions(person.id, relationships, allPersons);
 
   function handleEdit() {
     setFormData({
@@ -250,26 +248,34 @@ export default function PersonDetail({
           </div>
         )}
 
-        {/* Relationships */}
+        {/* Unions (Marriages / Partnerships) */}
+        {unions.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-medium uppercase tracking-wider text-white/40">
+              Unions
+            </h2>
+            {unions.map((union) => (
+              <UnionCard
+                key={union.relationshipId}
+                union={union}
+                graphId={graphId}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Relationships (Parents & Children) */}
         {(grouped.parents.length > 0 ||
-          grouped.spouses.length > 0 ||
           grouped.children.length > 0) && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
             <h2 className="mb-4 text-xs font-medium uppercase tracking-wider text-white/40">
-              Relationships
+              Family
             </h2>
             <div className="space-y-4">
               {grouped.parents.length > 0 && (
                 <RelationshipGroup
                   label="Parents"
                   items={grouped.parents}
-                  graphId={graphId}
-                />
-              )}
-              {grouped.spouses.length > 0 && (
-                <RelationshipGroup
-                  label="Spouses"
-                  items={grouped.spouses}
                   graphId={graphId}
                 />
               )}
@@ -299,7 +305,7 @@ export default function PersonDetail({
           !person.birth_location &&
           !person.notes &&
           grouped.parents.length === 0 &&
-          grouped.spouses.length === 0 &&
+          unions.length === 0 &&
           grouped.children.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/20 p-12 text-center">
               <p className="text-white/40">
@@ -506,7 +512,7 @@ export default function PersonDetail({
 
       {/* Relationships (read-only in edit mode) */}
       {(grouped.parents.length > 0 ||
-        grouped.spouses.length > 0 ||
+        unions.length > 0 ||
         grouped.children.length > 0) && (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 opacity-60">
           <h2 className="mb-4 text-xs font-medium uppercase tracking-wider text-white/40">
@@ -520,12 +526,24 @@ export default function PersonDetail({
                 graphId={graphId}
               />
             )}
-            {grouped.spouses.length > 0 && (
-              <RelationshipGroup
-                label="Spouses"
-                items={grouped.spouses}
-                graphId={graphId}
-              />
+            {unions.length > 0 && (
+              <div>
+                <h3 className="mb-2 text-sm font-semibold text-white/60">Unions</h3>
+                <div className="space-y-1">
+                  {unions.map((u) => (
+                    <div key={u.relationshipId} className="flex items-center gap-2 text-sm">
+                      <span className="text-xs">{u.icon}</span>
+                      <Link
+                        href={`/graph/${graphId}/person/${u.partner.id}`}
+                        className="text-white/80 transition hover:text-[#7fdb9a]"
+                      >
+                        {u.partner.display_name}
+                      </Link>
+                      <span className="text-xs text-white/30">{u.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
             {grouped.children.length > 0 && (
               <RelationshipGroup
@@ -542,6 +560,55 @@ export default function PersonDetail({
 }
 
 // ── Sub-components ───────────────────────────────────────
+
+function UnionCard({
+  union,
+  graphId,
+}: {
+  union: Union;
+  graphId: string;
+}) {
+  const dateRange = formatUnionDateRange(union.startDate, union.endDate);
+
+  // Color variations by union type
+  const borderColor =
+    union.type === "divorced"
+      ? "border-red-500/20"
+      : union.type === "partners"
+        ? "border-blue-400/20"
+        : "border-[#7fdb9a]/20";
+
+  return (
+    <div
+      className={`rounded-2xl border ${borderColor} bg-white/5 p-5 transition hover:bg-white/[0.07]`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{union.icon}</span>
+          <span className="text-sm font-semibold text-white/70">
+            {union.label}
+          </span>
+          {dateRange && (
+            <span className="text-xs text-white/40">{dateRange}</span>
+          )}
+        </div>
+      </div>
+      <div className="mt-2">
+        <Link
+          href={`/graph/${graphId}/person/${union.partner.id}`}
+          className="text-lg font-medium text-white/90 transition hover:text-[#7fdb9a]"
+        >
+          {union.partner.display_name}
+        </Link>
+        {union.partner.birth_date && (
+          <span className="ml-2 text-sm text-white/40">
+            {formatDateForDisplay(union.partner.birth_date)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function RelationshipGroup({
   label,
