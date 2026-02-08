@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { Person, Relationship } from "@/types/database";
 import {
   transformToHierarchicalTree,
+  transformToAncestorTree,
+  transformToDescendantTree,
   type TreeDisplayNode,
 } from "@/lib/dtree-transform";
 import { getUnionTypeLabel } from "@/lib/union-utils";
@@ -13,6 +15,8 @@ export type TreeOrientation = "vertical" | "horizontal";
 export type ConnectionStyle = "curved" | "right-angle";
 export type NodeStyle = "compact" | "detailed";
 
+export type TreeViewMode = "full" | "ancestors" | "descendants";
+
 interface SimpleTreeViewProps {
   graphId: string;
   persons: Person[];
@@ -20,6 +24,8 @@ interface SimpleTreeViewProps {
   orientation?: TreeOrientation;
   connectionStyle?: ConnectionStyle;
   nodeStyle?: NodeStyle;
+  treeViewMode?: TreeViewMode;
+  focusPersonId?: string | null;
 }
 
 export interface SimpleTreeViewHandle {
@@ -91,6 +97,8 @@ const SimpleTreeView = React.forwardRef<
     orientation = "vertical",
     connectionStyle = "curved",
     nodeStyle = "compact",
+    treeViewMode = "full",
+    focusPersonId = null,
   },
   ref,
 ) {
@@ -198,8 +206,15 @@ const SimpleTreeView = React.forwardRef<
           personMap.set(p.id, p);
         }
 
-        // Transform data to hierarchical format
-        const treeData = transformToHierarchicalTree(persons, relationships);
+        // Transform data to hierarchical format based on view mode
+        let treeData: TreeDisplayNode[];
+        if (treeViewMode === "ancestors" && focusPersonId) {
+          treeData = transformToAncestorTree(persons, relationships, focusPersonId);
+        } else if (treeViewMode === "descendants" && focusPersonId) {
+          treeData = transformToDescendantTree(persons, relationships, focusPersonId);
+        } else {
+          treeData = transformToHierarchicalTree(persons, relationships);
+        }
 
         if (treeData.length === 0) {
           setError("No family tree data to display.");
@@ -479,6 +494,8 @@ const SimpleTreeView = React.forwardRef<
     orientation,
     connectionStyle,
     nodeStyle,
+    treeViewMode,
+    focusPersonId,
   ]);
 
   return (
@@ -508,6 +525,25 @@ const SimpleTreeView = React.forwardRef<
           <div className="text-red-400 text-center p-4 max-w-md">
             <p className="text-lg font-semibold mb-2">Error</p>
             <p>{error}</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && treeViewMode !== "full" && !focusPersonId && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0a1410]/80">
+          <div className="text-center p-6 max-w-md">
+            <p className="text-2xl mb-3">
+              {treeViewMode === "ancestors" ? "⬆" : "⬇"}
+            </p>
+            <p className="text-[#7fdb9a] text-lg font-semibold mb-2">
+              {treeViewMode === "ancestors"
+                ? "Ancestor View"
+                : "Descendant View"}
+            </p>
+            <p className="text-white/50 text-sm">
+              Search for a person above to view their{" "}
+              {treeViewMode === "ancestors" ? "ancestors" : "descendants"}.
+            </p>
           </div>
         </div>
       )}

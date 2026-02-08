@@ -330,38 +330,39 @@ export function formatLifespan(
   return "";
 }
 
-/**
- * Transform our data model into a simple hierarchical tree format.
- * Each node combines a person with their spouse (if any) into a single display name.
- *
- * This matches the original working tree format from the exported JSON:
- * "John McGinty (1870-1909) & Margaret Kirk (1871-1906)"
- */
-export function transformToHierarchicalTree(
+// ── Shared map-building helper ──────────────────────────
+
+const PARENT_TYPES = new Set([
+  "biological_parent",
+  "adoptive_parent",
+  "step_parent",
+]);
+const SPOUSE_TYPES = new Set(["spouse", "ex_spouse", "partner"]);
+
+interface TreeMaps {
+  personMap: Map<string, Person>;
+  personIds: Set<string>;
+  childToParents: Map<string, string[]>;
+  parentToChildren: Map<string, string[]>;
+  personSpouse: Map<string, { spouseId: string; type: string }>;
+}
+
+function buildTreeMaps(
   persons: Person[],
   relationships: Relationship[],
-): TreeDisplayNode[] {
-  const parentTypes = new Set([
-    "biological_parent",
-    "adoptive_parent",
-    "step_parent",
-  ]);
-  const spouseTypes = new Set(["spouse", "ex_spouse", "partner"]);
-
-  // Build lookup maps
+): TreeMaps {
   const personMap = new Map<string, Person>();
   for (const p of persons) {
     personMap.set(p.id, p);
   }
   const personIds = new Set(persons.map((p) => p.id));
 
-  // Build parent-child relationships
   const childToParents = new Map<string, string[]>();
   const parentToChildren = new Map<string, string[]>();
 
   for (const rel of relationships) {
     if (!personIds.has(rel.person_a) || !personIds.has(rel.person_b)) continue;
-    if (!parentTypes.has(rel.type)) continue;
+    if (!PARENT_TYPES.has(rel.type)) continue;
 
     const parentId = rel.person_a;
     const childId = rel.person_b;
@@ -373,14 +374,12 @@ export function transformToHierarchicalTree(
     parentToChildren.get(parentId)!.push(childId);
   }
 
-  // Build spouse relationships (we'll use first spouse found for each person)
   const personSpouse = new Map<string, { spouseId: string; type: string }>();
 
   for (const rel of relationships) {
     if (!personIds.has(rel.person_a) || !personIds.has(rel.person_b)) continue;
-    if (!spouseTypes.has(rel.type)) continue;
+    if (!SPOUSE_TYPES.has(rel.type)) continue;
 
-    // Only store one spouse per person (first one found)
     if (!personSpouse.has(rel.person_a)) {
       personSpouse.set(rel.person_a, { spouseId: rel.person_b, type: rel.type });
     }
@@ -389,12 +388,29 @@ export function transformToHierarchicalTree(
     }
   }
 
-  // Find children shared between two parents
-  function getSharedChildren(parent1: string, parent2: string): string[] {
-    const children1 = new Set(parentToChildren.get(parent1) ?? []);
-    const children2 = parentToChildren.get(parent2) ?? [];
-    return children2.filter((c) => children1.has(c));
-  }
+  return { personMap, personIds, childToParents, parentToChildren, personSpouse };
+}
+
+// ── Full tree transform ─────────────────────────────────
+
+/**
+ * Transform our data model into a simple hierarchical tree format.
+ * Each node combines a person with their spouse (if any) into a single display name.
+ *
+ * This matches the original working tree format from the exported JSON:
+ * "John McGinty (1870-1909) & Margaret Kirk (1871-1906)"
+ */
+export function transformToHierarchicalTree(
+  persons: Person[],
+  relationships: Relationship[],
+): TreeDisplayNode[] {
+  const {
+    personMap,
+    personIds,
+    childToParents,
+    parentToChildren,
+    personSpouse,
+  } = buildTreeMaps(persons, relationships);
 
   // Find root persons (no parents in the data)
   const roots = persons.filter(
@@ -556,5 +572,183 @@ export function transformToHierarchicalTree(
   }
 
   const rootNode = buildNode(rootPerson.id);
+  return rootNode ? [rootNode] : [];
+}
+
+// ── Ancestor tree transform ─────────────────────────────
+
+/**
+ * Build an ancestor (pedigree) tree for a specific person.
+ *
+ * The focus person is the root node. Their parents appear as "children"
+ * in the D3 data structure, grandparents as grandchildren, etc.
+ * This produces a natural pedigree chart: person at top, ancestors below.
+ *
+ * Spouses of ancestors are shown as couple nodes but their own parents
+ * are NOT traversed — only the direct lineage is followed.
+ */
+export function transformToAncestorTree(
+  persons: Person[],
+  relationships: Relationship[],
+  focusPersonId: string,
+): TreeDisplayNode[] {
+  const { personMap, childToParents, personSpouse } = buildTreeMaps(
+    persons,
+    relationships,
+  );
+
+  const focusPerson = personMap.get(focusPersonId);
+  if (!focusPerson) return [];
+
+  const processedPersons = new Set<string>();
+  let nodeCounter = 0;
+
+  function formatPersonName(person: Person): string {
+    let name = person.display_name;
+    const lifespan = formatLifespan(person.birth_date, person.death_date);
+    if (lifespan) {
+      name += ` (${lifespan})`;
+    }
+    return name;
+  }
+
+  function buildAncestorNode(personId: string): TreeDisplayNode | null {
+    if (processedPersons.has(personId)) return null;
+
+    const person = personMap.get(personId);
+    if (!person) return null;
+
+    processedPersons.add(personId);
+
+    // Build node name (person + spouse if any)
+    let nodeName = formatPersonName(person);
+    const personIds: string[] = [personId];
+    let unionType: string | null = null;
+
+    const spouseRel = personSpouse.get(personId);
+    if (spouseRel && !processedPersons.has(spouseRel.spouseId)) {
+      const spouse = personMap.get(spouseRel.spouseId);
+      if (spouse) {
+        processedPersons.add(spouseRel.spouseId);
+        nodeName += " & " + formatPersonName(spouse);
+        personIds.push(spouseRel.spouseId);
+        unionType = spouseRel.type;
+      }
+    }
+
+    const nodeId = `a-${nodeCounter++}`;
+
+    // "Children" in this tree are actually parents (going upward)
+    // Only follow the direct lineage parent, not the spouse's parents
+    const parentIds = childToParents.get(personId) ?? [];
+    const childNodes: TreeDisplayNode[] = [];
+
+    for (const parentId of parentIds) {
+      const parentNode = buildAncestorNode(parentId);
+      if (parentNode) {
+        childNodes.push(parentNode);
+      }
+    }
+
+    return {
+      id: nodeId,
+      name: nodeName,
+      personIds,
+      unionType,
+      children: childNodes,
+    };
+  }
+
+  const rootNode = buildAncestorNode(focusPersonId);
+  return rootNode ? [rootNode] : [];
+}
+
+// ── Descendant tree transform ───────────────────────────
+
+/**
+ * Build a descendant tree for a specific person.
+ *
+ * Same as the full tree but starting from a user-specified root
+ * instead of auto-selecting the best root.
+ */
+export function transformToDescendantTree(
+  persons: Person[],
+  relationships: Relationship[],
+  focusPersonId: string,
+): TreeDisplayNode[] {
+  const { personMap, parentToChildren, personSpouse } = buildTreeMaps(
+    persons,
+    relationships,
+  );
+
+  const focusPerson = personMap.get(focusPersonId);
+  if (!focusPerson) return [];
+
+  const processedPersons = new Set<string>();
+  let nodeCounter = 0;
+
+  function formatPersonName(person: Person): string {
+    let name = person.display_name;
+    const lifespan = formatLifespan(person.birth_date, person.death_date);
+    if (lifespan) {
+      name += ` (${lifespan})`;
+    }
+    return name;
+  }
+
+  function buildDescendantNode(personId: string): TreeDisplayNode | null {
+    if (processedPersons.has(personId)) return null;
+
+    const person = personMap.get(personId);
+    if (!person) return null;
+
+    processedPersons.add(personId);
+
+    // Build node name (person + spouse if any)
+    let nodeName = formatPersonName(person);
+    const childrenSourceIds: string[] = [personId];
+    let unionType: string | null = null;
+
+    const spouseRel = personSpouse.get(personId);
+    if (spouseRel && !processedPersons.has(spouseRel.spouseId)) {
+      const spouse = personMap.get(spouseRel.spouseId);
+      if (spouse) {
+        processedPersons.add(spouseRel.spouseId);
+        nodeName += " & " + formatPersonName(spouse);
+        childrenSourceIds.push(spouseRel.spouseId);
+        unionType = spouseRel.type;
+      }
+    }
+
+    const nodeId = `d-${nodeCounter++}`;
+
+    // Collect all children of this family unit
+    const childIdsSet = new Set<string>();
+    for (const parentId of childrenSourceIds) {
+      const children = parentToChildren.get(parentId) ?? [];
+      for (const childId of children) {
+        childIdsSet.add(childId);
+      }
+    }
+
+    // Build children nodes recursively
+    const childNodes: TreeDisplayNode[] = [];
+    for (const childId of childIdsSet) {
+      const childNode = buildDescendantNode(childId);
+      if (childNode) {
+        childNodes.push(childNode);
+      }
+    }
+
+    return {
+      id: nodeId,
+      name: nodeName,
+      personIds: childrenSourceIds,
+      unionType,
+      children: childNodes,
+    };
+  }
+
+  const rootNode = buildDescendantNode(focusPersonId);
   return rootNode ? [rootNode] : [];
 }
