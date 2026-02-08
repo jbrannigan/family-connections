@@ -6,6 +6,7 @@ import SimpleTreeView, {
   type SimpleTreeViewHandle,
   type TreeOrientation,
   type ConnectionStyle,
+  type NodeStyle,
 } from "./simple-tree-view";
 import SearchInput from "./search-input";
 import { searchPersons } from "@/lib/search";
@@ -16,13 +17,14 @@ type ViewMode = "tree" | "list";
 interface TreeSettings {
   orientation: TreeOrientation;
   connectionStyle: ConnectionStyle;
+  nodeStyle: NodeStyle;
 }
 
 const TREE_SETTINGS_KEY = "family-connections-tree-settings";
 
 function loadTreeSettings(): TreeSettings {
   if (typeof window === "undefined") {
-    return { orientation: "vertical", connectionStyle: "curved" };
+    return { orientation: "vertical", connectionStyle: "curved", nodeStyle: "detailed" };
   }
   try {
     const stored = localStorage.getItem(TREE_SETTINGS_KEY);
@@ -31,12 +33,13 @@ function loadTreeSettings(): TreeSettings {
       return {
         orientation: parsed.orientation === "horizontal" ? "horizontal" : "vertical",
         connectionStyle: parsed.connectionStyle === "right-angle" ? "right-angle" : "curved",
+        nodeStyle: parsed.nodeStyle === "compact" ? "compact" : "detailed",
       };
     }
   } catch {
     // ignore parse errors
   }
-  return { orientation: "vertical", connectionStyle: "curved" };
+  return { orientation: "vertical", connectionStyle: "curved", nodeStyle: "detailed" };
 }
 
 function saveTreeSettings(settings: TreeSettings) {
@@ -183,6 +186,32 @@ export default function GraphViewToggle({
                 ⊾ Right Angle
               </button>
             </div>
+
+            {/* Node style toggle */}
+            <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1">
+              <button
+                onClick={() => updateTreeSettings({ nodeStyle: "compact" })}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  treeSettings.nodeStyle === "compact"
+                    ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+                title="Compact nodes (name only)"
+              >
+                ▬ Compact
+              </button>
+              <button
+                onClick={() => updateTreeSettings({ nodeStyle: "detailed" })}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  treeSettings.nodeStyle === "detailed"
+                    ? "bg-[#7fdb9a]/20 text-[#7fdb9a]"
+                    : "text-white/40 hover:text-white/60"
+                }`}
+                title="Detailed nodes (name, dates, location, avatar)"
+              >
+                ▣ Detailed
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -196,6 +225,7 @@ export default function GraphViewToggle({
           relationships={relationships}
           orientation={treeSettings.orientation}
           connectionStyle={treeSettings.connectionStyle}
+          nodeStyle={treeSettings.nodeStyle}
         />
       ) : (
         <div className="mx-auto max-w-5xl">
