@@ -24,7 +24,7 @@
 ```
 family_graphs: id (uuid PK), name, owner_id (FK auth.users), invite_code (unique, 8-char), created_at
 memberships: user_id (FK auth.users), graph_id (FK family_graphs), role ('admin'|'member'), created_at — PK(user_id, graph_id)
-persons: id (uuid PK), graph_id (FK), display_name, pronouns, birth_date (text), death_date (text), birth_location, is_incomplete (bool), notes, created_by, created_at, updated_at
+persons: id (uuid PK), graph_id (FK), display_name, given_name, nickname, preferred_name, avatar_url, pronouns, birth_date (text), death_date (text), birth_location, is_incomplete (bool), notes, created_by, created_at, updated_at
 relationships: id (uuid PK), graph_id (FK), person_a (FK persons), person_b (FK persons), type (text), start_date (text), end_date (text), created_by, created_at — UNIQUE(graph_id, person_a, person_b, type)
 stories: id (uuid PK), graph_id (FK), person_id (FK persons), content, is_fun_fact (bool), author_id, created_at
 profiles: id (uuid PK, FK auth.users), display_name, avatar_url
@@ -70,6 +70,7 @@ src/
       server.ts                       — Server Supabase client (cookies)
       middleware.ts                   — Auth middleware helper
     import-treedown.ts                — TreeDown format parser with gender inference
+    name-utils.ts                     — Name parsing (parseDisplayName, getDisplayParts)
     relationships.ts                  — Kinship path finder (cousin degree, etc.)
   types/
     database.ts                       — TypeScript types for all DB tables

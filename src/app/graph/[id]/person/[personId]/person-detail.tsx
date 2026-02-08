@@ -88,6 +88,9 @@ export default function PersonDetail({
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [formData, setFormData] = useState({
     display_name: person.display_name,
+    given_name: person.given_name ?? "",
+    nickname: person.nickname ?? "",
+    preferred_name: person.preferred_name ?? "",
     pronouns: person.pronouns ?? "",
     birth_date: person.birth_date ?? "",
     death_date: person.death_date ?? "",
@@ -103,6 +106,9 @@ export default function PersonDetail({
   function handleEdit() {
     setFormData({
       display_name: person.display_name,
+      given_name: person.given_name ?? "",
+      nickname: person.nickname ?? "",
+      preferred_name: person.preferred_name ?? "",
       pronouns: person.pronouns ?? "",
       birth_date: person.birth_date ?? "",
       death_date: person.death_date ?? "",
@@ -125,6 +131,9 @@ export default function PersonDetail({
     try {
       const fd = new FormData();
       fd.set("display_name", formData.display_name);
+      fd.set("given_name", formData.given_name);
+      fd.set("nickname", formData.nickname);
+      fd.set("preferred_name", formData.preferred_name);
       fd.set("pronouns", formData.pronouns);
       fd.set("birth_date", formData.birth_date);
       fd.set("death_date", formData.death_date);
@@ -151,7 +160,22 @@ export default function PersonDetail({
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">{person.display_name}</h1>
-            <div className="mt-1 flex items-center gap-3">
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              {person.preferred_name && (
+                <span className="text-sm text-[#7fdb9a]/70">
+                  Goes by &ldquo;{person.preferred_name}&rdquo;
+                </span>
+              )}
+              {person.nickname && !person.preferred_name && (
+                <span className="text-sm text-white/50">
+                  &ldquo;{person.nickname}&rdquo;
+                </span>
+              )}
+              {person.nickname && person.preferred_name && (
+                <span className="text-sm text-white/40">
+                  aka &ldquo;{person.nickname}&rdquo;
+                </span>
+              )}
               {person.pronouns && (
                 <span className="text-sm text-white/50">
                   {person.pronouns}
@@ -333,6 +357,55 @@ export default function PersonDetail({
             className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
             required
           />
+          <p className="mt-1 text-xs text-white/30">
+            Full name as shown in lists and cards
+          </p>
+        </div>
+
+        {/* Given Name, Nickname, Preferred Name */}
+        <div className="grid gap-5 sm:grid-cols-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/40">
+              Given Name
+            </label>
+            <input
+              type="text"
+              value={formData.given_name}
+              onChange={(e) =>
+                setFormData({ ...formData, given_name: e.target.value })
+              }
+              placeholder="e.g. Margaret"
+              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/40">
+              Nickname
+            </label>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) =>
+                setFormData({ ...formData, nickname: e.target.value })
+              }
+              placeholder="e.g. Peggy"
+              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/40">
+              Preferred Name
+            </label>
+            <input
+              type="text"
+              value={formData.preferred_name}
+              onChange={(e) =>
+                setFormData({ ...formData, preferred_name: e.target.value })
+              }
+              placeholder="e.g. Peg"
+              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
+            />
+          </div>
         </div>
 
         {/* Pronouns */}
