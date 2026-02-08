@@ -7,6 +7,20 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-07
+
+### Added
+- **User Guide** — in-app guide at `/guide` for non-technical family members (Feature 013, PR #14)
+- 13 sections covering all app features: Getting Started, Dashboard, Tree View, Tree Settings, Ancestor & Descendant View, List View, Search, Person Detail, Stories, TreeDown Import, Export, Invite & Collaboration, Keyboard Shortcuts
+- Sticky table of contents with anchor links (sidebar on desktop, collapsible dropdown on mobile)
+- Admin-only features marked with green "Admin only" badges
+- Public route — accessible without login, shows "Dashboard" or "Sign In" based on auth state
+- Guide links added to landing page and dashboard header
+- Smooth scrolling enabled globally for anchor link navigation
+
+### Changed
+- Updated NEXT-STEPS.md technical debt checklist to reflect current test coverage (127 tests across 7 suites)
+
 ## [0.8.1] - 2026-02-07
 
 ### Fixed

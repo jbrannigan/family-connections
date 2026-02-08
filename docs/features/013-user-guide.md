@@ -1,8 +1,8 @@
 # Feature 013: In-App User Guide
 
-**Status:** In Progress
+**Status:** Complete
 **Branch:** `chore/013-technical-debt`
-**PRs:** (link PR here when created)
+**PRs:** [PR #14](https://github.com/jbrannigan/family-connections/pull/14)
 
 ## Overview
 
