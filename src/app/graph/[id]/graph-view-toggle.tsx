@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useSyncExternalStore } from "react";
 import PersonList from "./person-list";
 import SimpleTreeView, {
   type SimpleTreeViewHandle,
@@ -23,24 +23,49 @@ interface TreeSettings {
 
 const TREE_SETTINGS_KEY = "family-connections-tree-settings";
 
-function loadTreeSettings(): TreeSettings {
-  if (typeof window === "undefined") {
-    return { orientation: "vertical", connectionStyle: "curved", nodeStyle: "detailed" };
-  }
+const DEFAULT_TREE_SETTINGS: TreeSettings = {
+  orientation: "vertical",
+  connectionStyle: "curved",
+  nodeStyle: "detailed",
+};
+
+function parseTreeSettings(raw: string | null): TreeSettings {
+  if (!raw) return DEFAULT_TREE_SETTINGS;
   try {
-    const stored = localStorage.getItem(TREE_SETTINGS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return {
-        orientation: parsed.orientation === "horizontal" ? "horizontal" : "vertical",
-        connectionStyle: parsed.connectionStyle === "right-angle" ? "right-angle" : "curved",
-        nodeStyle: parsed.nodeStyle === "compact" ? "compact" : "detailed",
-      };
-    }
+    const parsed = JSON.parse(raw);
+    return {
+      orientation: parsed.orientation === "horizontal" ? "horizontal" : "vertical",
+      connectionStyle: parsed.connectionStyle === "right-angle" ? "right-angle" : "curved",
+      nodeStyle: parsed.nodeStyle === "compact" ? "compact" : "detailed",
+    };
   } catch {
-    // ignore parse errors
+    return DEFAULT_TREE_SETTINGS;
   }
-  return { orientation: "vertical", connectionStyle: "curved", nodeStyle: "detailed" };
+}
+
+// Cached snapshot for useSyncExternalStore (must return same reference if unchanged)
+let cachedSettingsRaw: string | null = null;
+let cachedSettings: TreeSettings = DEFAULT_TREE_SETTINGS;
+
+function subscribeToTreeSettings(callback: () => void) {
+  const handler = (e: StorageEvent) => {
+    if (e.key === TREE_SETTINGS_KEY) callback();
+  };
+  window.addEventListener("storage", handler);
+  return () => window.removeEventListener("storage", handler);
+}
+
+function getTreeSettingsSnapshot(): TreeSettings {
+  const raw = localStorage.getItem(TREE_SETTINGS_KEY);
+  if (raw !== cachedSettingsRaw) {
+    cachedSettingsRaw = raw;
+    cachedSettings = parseTreeSettings(raw);
+  }
+  return cachedSettings;
+}
+
+function getTreeSettingsServerSnapshot(): TreeSettings {
+  return DEFAULT_TREE_SETTINGS;
 }
 
 function saveTreeSettings(settings: TreeSettings) {
@@ -70,8 +95,14 @@ export default function GraphViewToggle({
   const [searchQuery, setSearchQuery] = useState("");
   const treeRef = useRef<SimpleTreeViewHandle>(null);
 
-  // Tree settings with localStorage persistence (lazy init from localStorage)
-  const [treeSettings, setTreeSettings] = useState<TreeSettings>(loadTreeSettings);
+  // Tree settings — synced from localStorage via useSyncExternalStore (SSR-safe)
+  const treeSettingsFromStore = useSyncExternalStore(
+    subscribeToTreeSettings,
+    getTreeSettingsSnapshot,
+    getTreeSettingsServerSnapshot
+  );
+  const [treeSettingsOverride, setTreeSettingsOverride] = useState<TreeSettings | null>(null);
+  const treeSettings = treeSettingsOverride ?? treeSettingsFromStore;
 
   // Ephemeral tree view mode — not persisted
   const [treeViewMode, setTreeViewMode] = useState<TreeViewMode>("full");
@@ -84,11 +115,9 @@ export default function GraphViewToggle({
   }, [focusPersonId, persons]);
 
   function updateTreeSettings(update: Partial<TreeSettings>) {
-    setTreeSettings((prev) => {
-      const next = { ...prev, ...update };
-      saveTreeSettings(next);
-      return next;
-    });
+    const next = { ...treeSettings, ...update };
+    saveTreeSettings(next);
+    setTreeSettingsOverride(next);
   }
 
   function handleTreeViewModeChange(mode: TreeViewMode) {
