@@ -14,8 +14,10 @@ Discover how your family is connected. A full-stack family relationship app with
 - **Relationship Calculator** — find the path between any two people and compute kinship (e.g. "2nd cousin once removed")
 - **Stories & Fun Facts** — add, edit, and delete stories on any person; fun fact toggle, author attribution, and relative timestamps
 - **Authentication** — password-based sign-in via Supabase Auth
-- **Collaboration** — invite family members to contribute via invite codes
-- **Archival Export** — download your family tree as a human-readable plain-text archive (.txt) or structured JSON (.json); admin-only
+- **4-Tier Roles** — Owner, Editor, Contributor, Viewer with granular permissions enforced by RLS
+- **Invite Links** — shareable URLs with role baked in; QR code generation for family reunions
+- **Guest Mode** — PIN-locked read-only toggle for safe device sharing at reunions
+- **Archival Export** — download your family tree as a human-readable plain-text archive (.txt) or structured JSON (.json); owner-only
 - **TreeDown Import** — bulk import family trees from indentation-based text format with gender-based surname inference
 - **User Guide** — in-app guide at `/guide` covering all features for non-technical family members
 

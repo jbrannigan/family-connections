@@ -1,8 +1,8 @@
 # Feature 014: Roles, Invite Links & Guest Mode
 
-**Status:** Draft
+**Status:** Complete
 **Branch:** `feat/014-roles-and-invites`
-**PRs:** (link PRs here as they're created)
+**PRs:** #15
 
 ## Summary
 

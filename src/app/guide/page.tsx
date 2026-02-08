@@ -15,6 +15,7 @@ const tocItems = [
   { id: "treedown-import", label: "TreeDown Import", emoji: "\u{1F4E5}" },
   { id: "export", label: "Export", emoji: "\u{1F4E4}" },
   { id: "collaboration", label: "Invite & Collaboration", emoji: "\u{1F91D}" },
+  { id: "guest-mode", label: "Guest Mode", emoji: "\u{1F6E1}\uFE0F" },
   { id: "shortcuts", label: "Keyboard Shortcuts", emoji: "\u2328\uFE0F" },
 ];
 
@@ -102,7 +103,7 @@ export default async function GuidePage() {
                     <span>
                       <strong className="text-white">New Graph</strong> &mdash; create a
                       new family graph. Give it a name like &ldquo;The Smith Family&rdquo;
-                      and you become the admin.
+                      and you become the owner.
                     </span>
                   </li>
                   <li className="flex gap-3">
@@ -257,7 +258,7 @@ export default async function GuidePage() {
                   view their detail page.
                 </p>
                 <p className="mt-4 text-white/70 leading-relaxed">
-                  <AdminLabel /> Admins can click{" "}
+                  <RoleLabel role="editor" /> Editors can click{" "}
                   <strong className="text-white">+ Add Person</strong> to add someone new,
                   or use the <strong className="text-white">+ Add relationship</strong> link
                   on any card to connect two people.
@@ -336,7 +337,7 @@ export default async function GuidePage() {
                   </li>
                 </ul>
                 <p className="mt-4 text-white/70 leading-relaxed">
-                  <AdminLabel /> Admins can click{" "}
+                  <RoleLabel role="editor" /> Editors can click{" "}
                   <strong className="text-white">Edit</strong> to update any field. Dates
                   can be entered as a year only (1958), year and month (1958-03), or a full
                   date (1958-03-15).
@@ -380,8 +381,8 @@ export default async function GuidePage() {
                   </li>
                 </ul>
                 <p className="mt-4 text-white/70 leading-relaxed">
-                  Anyone who is a member of the graph can add stories &mdash; you
-                  don&rsquo;t need to be an admin.
+                  Contributors and above can add stories &mdash; you
+                  don&rsquo;t need to be an editor.
                 </p>
               </Card>
             </section>
@@ -391,7 +392,7 @@ export default async function GuidePage() {
               <SectionHeading emoji={"\u{1F4E5}"} title="TreeDown Import" />
               <Card>
                 <p className="text-white/70 leading-relaxed">
-                  <AdminLabel /> TreeDown import lets you bulk-import an entire family tree
+                  <RoleLabel role="owner" /> TreeDown import lets you bulk-import an entire family tree
                   from a simple text format. This is useful for initial setup when you have
                   a large tree to enter.
                 </p>
@@ -420,7 +421,7 @@ export default async function GuidePage() {
               <SectionHeading emoji={"\u{1F4E4}"} title="Export" />
               <Card>
                 <p className="text-white/70 leading-relaxed">
-                  <AdminLabel /> Click the{" "}
+                  <RoleLabel role="owner" /> Click the{" "}
                   <strong className="text-white">Export</strong> button on the graph page to
                   download your family tree. Two formats are available:
                 </p>
@@ -452,31 +453,76 @@ export default async function GuidePage() {
               <SectionHeading emoji={"\u{1F91D}"} title="Invite & Collaboration" />
               <Card>
                 <p className="text-white/70 leading-relaxed">
-                  Every family graph has an{" "}
-                  <strong className="text-white">invite code</strong> shown on the graph
-                  page. Share this code with family members so they can join your tree.
+                  Owners and editors can invite family members by clicking the{" "}
+                  <strong className="text-white">Invite</strong> button on the graph page.
+                  This opens a modal where you can choose a role, copy a shareable link, or
+                  display a QR code for scanning at reunions.
                 </p>
                 <p className="mt-4 text-white/70 leading-relaxed">
-                  There are two roles:
+                  There are four roles:
                 </p>
                 <ul className="mt-4 space-y-3 text-white/70">
                   <li className="flex gap-3">
                     <span className="text-[#7fdb9a]">&bull;</span>
                     <span>
-                      <strong className="text-white">Admin</strong> &mdash; can add and edit
-                      people, manage relationships, import, and export. The person who creates
-                      a graph is automatically the admin.
+                      <strong className="text-white">Owner</strong> &mdash; full control.
+                      Can manage members, import, export, and delete the graph. The person who
+                      creates a graph is automatically the owner.
                     </span>
                   </li>
                   <li className="flex gap-3">
                     <span className="text-[#7fdb9a]">&bull;</span>
                     <span>
-                      <strong className="text-white">Member</strong> &mdash; can view
-                      everything, browse the tree, and add stories. Anyone who joins via
-                      invite code becomes a member.
+                      <strong className="text-white">Editor</strong> &mdash; can add and edit
+                      people, manage relationships, and add stories. A trusted family member
+                      who helps maintain the tree.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-[#7fdb9a]">&bull;</span>
+                    <span>
+                      <strong className="text-white">Contributor</strong> &mdash; can view
+                      the tree and add stories about family members. Cannot edit people or
+                      relationships.
+                    </span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="text-[#7fdb9a]">&bull;</span>
+                    <span>
+                      <strong className="text-white">Viewer</strong> &mdash; read-only.
+                      Can browse the tree, search, and read stories. Anyone who joins via the
+                      basic invite code becomes a viewer.
                     </span>
                   </li>
                 </ul>
+                <p className="mt-4 text-white/70 leading-relaxed">
+                  Each invite link has a specific role baked in, so the person who clicks it
+                  gets exactly the access level you intended.
+                </p>
+              </Card>
+            </section>
+
+            {/* 13. Guest Mode */}
+            <section id="guest-mode" className="scroll-mt-24">
+              <SectionHeading emoji={"\u{1F6E1}\uFE0F"} title="Guest Mode" />
+              <Card>
+                <p className="text-white/70 leading-relaxed">
+                  <RoleLabel role="editor" /> At a family reunion, you might want to hand
+                  your phone to a relative so they can browse the tree &mdash; without
+                  worrying about accidental edits.
+                </p>
+                <p className="mt-4 text-white/70 leading-relaxed">
+                  Click <strong className="text-white">Guest Mode</strong> in the graph
+                  header. On first use, you&rsquo;ll set a 4-digit PIN. The app instantly
+                  hides all edit, delete, import, and export controls and shows a{" "}
+                  <strong className="text-amber-400">Guest Mode &mdash; Read Only</strong>{" "}
+                  banner.
+                </p>
+                <p className="mt-4 text-white/70 leading-relaxed">
+                  To get your full controls back, click{" "}
+                  <strong className="text-white">Exit Guest Mode</strong> and enter your
+                  PIN.
+                </p>
               </Card>
             </section>
 
@@ -534,10 +580,11 @@ function Kbd({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AdminLabel() {
+function RoleLabel({ role }: { role: "owner" | "editor" }) {
+  const label = role === "owner" ? "Owner only" : "Editor+";
   return (
     <span className="mr-1 inline-block rounded-full bg-[#7fdb9a]/10 px-2.5 py-0.5 text-xs font-medium text-[#7fdb9a]">
-      Admin only
+      {label}
     </span>
   );
 }

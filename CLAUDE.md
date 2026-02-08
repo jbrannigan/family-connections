@@ -48,6 +48,12 @@ Permission utilities in `src/lib/roles.ts`: `canEdit()`, `canAddStories()`, `can
 
 Legacy roles `admin`/`member` are mapped via `normalizeRole()`: admin → owner, member → viewer.
 
+### Guest Mode
+Client-side read-only toggle for Owners/Editors to safely share their device at reunions. When active, all edit/delete/import/export controls are hidden. A 4-digit PIN (SHA-256 hashed, stored in `localStorage` scoped per user) is required to exit. Implemented via `GuestModeProvider` React context in `src/lib/guest-mode.tsx`. This is a UI safety net only — server-side RLS remains the security boundary.
+
+### Invite Links
+Shareable URLs at `/join/[token]` with role baked in. The `invite_links` table stores token → role mappings. Owners and Editors can generate links via the Invite modal on the graph page. QR codes are rendered using the `qrcode` npm package. The old invite code flow (`/dashboard/join`) still works as a fallback (joins as Viewer).
+
 ### RLS Policies
 All tables use RLS. Access requires membership in the graph. Bootstrap policy on `memberships` allows INSERT for graph owners. SELECT policies on `persons` and `relationships` use `EXISTS (SELECT 1 FROM memberships WHERE ...)` to avoid recursion. Write policies check for `role IN ('owner', 'editor')` for persons/relationships, and `role IN ('owner', 'editor', 'contributor')` for stories.
 
