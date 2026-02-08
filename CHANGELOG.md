@@ -7,6 +7,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-02-07
+
+### Added
+- **Union Rendering** — type-aware display of marriages, divorces, and partnerships across all views (Feature 007, PR #10)
+- Union cards on person detail page: 💍 Married (green), 💔 Divorced (red), 🤝 Partners (blue) with date ranges and partner links
+- Unions section separated from Parents/Children ("Family") on person detail page
+- Tree view union type indicators: colored pill on couple node divider (detailed mode) and label below name (compact mode)
+- List view human-readable labels: "Married to" / "Divorced from" / "Partner of" replacing generic "Spouse of"
+- `union-utils.ts` — `resolveUnions()`, `formatUnionDateRange()`, `getUnionLabel()`, `getUnionTypeLabel()` with 24 unit tests
+- `TreeDisplayNode.unionType` field carries relationship type for couple node rendering
+
 ## [0.5.0] - 2026-02-07
 
 ### Added

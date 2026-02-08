@@ -23,6 +23,7 @@
 - [x] Dedicated page for viewing/editing person details
 - [x] Edit display name, pronouns, dates, notes
 - [x] View all relationships for a person
+- [x] Union cards for marriages, divorces, partnerships (v0.6.0)
 - [ ] Add/remove relationships from person page
 
 ### Search & Navigation ✅ (v0.3.0)
