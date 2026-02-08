@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeDate } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
 import { canEdit, canAddStories } from "@/lib/roles";
+import type { RelationshipType } from "@/types/database";
 
 export async function updatePerson(
   graphId: string,
@@ -173,4 +174,185 @@ export async function deleteStory(
   if (error) throw new Error(error.message);
 
   revalidatePath(`/graph/${graphId}/person/${personId}`);
+}
+
+const VALID_RELATIONSHIP_TYPES: RelationshipType[] = [
+  "biological_parent",
+  "adoptive_parent",
+  "step_parent",
+  "spouse",
+  "ex_spouse",
+  "partner",
+];
+
+const PARENT_TYPES = new Set<string>([
+  "biological_parent",
+  "adoptive_parent",
+  "step_parent",
+]);
+
+const SPOUSE_TYPES = new Set<string>(["spouse", "ex_spouse", "partner"]);
+
+export async function createRelationship(
+  graphId: string,
+  personId: string,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  // Verify editor or owner membership
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!membership || !canEdit(membership.role)) {
+    throw new Error("Editor access required");
+  }
+
+  // Extract and validate fields
+  const type = formData.get("type") as string;
+  const targetPersonId = formData.get("target_person_id") as string;
+  const direction = formData.get("direction") as string;
+
+  if (!type || !VALID_RELATIONSHIP_TYPES.includes(type as RelationshipType)) {
+    throw new Error("Invalid relationship type");
+  }
+
+  if (!targetPersonId) {
+    throw new Error("Please select a person");
+  }
+
+  if (targetPersonId === personId) {
+    throw new Error("Cannot create a relationship with the same person");
+  }
+
+  // Verify target person exists in this graph
+  const { data: targetPerson } = await supabase
+    .from("persons")
+    .select("id")
+    .eq("id", targetPersonId)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!targetPerson) {
+    throw new Error("Selected person not found in this graph");
+  }
+
+  // Determine person_a and person_b based on direction and type
+  let personA: string;
+  let personB: string;
+
+  if (PARENT_TYPES.has(type)) {
+    // For parent types: person_a = parent, person_b = child
+    if (direction === "current_is_a") {
+      personA = personId;
+      personB = targetPersonId;
+    } else {
+      personA = targetPersonId;
+      personB = personId;
+    }
+  } else {
+    // For spouse types: direction is irrelevant, store current as person_a
+    personA = personId;
+    personB = targetPersonId;
+  }
+
+  // For spouse types, check both directions for existing duplicate
+  if (SPOUSE_TYPES.has(type)) {
+    const { data: existing } = await supabase
+      .from("relationships")
+      .select("id")
+      .eq("graph_id", graphId)
+      .eq("type", type)
+      .or(
+        `and(person_a.eq.${personA},person_b.eq.${personB}),and(person_a.eq.${personB},person_b.eq.${personA})`,
+      )
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      throw new Error("This relationship already exists");
+    }
+  }
+
+  const { error } = await supabase.from("relationships").insert({
+    graph_id: graphId,
+    person_a: personA,
+    person_b: personB,
+    type,
+    created_by: user.id,
+  });
+
+  if (error) {
+    // Handle unique constraint violation
+    if (error.code === "23505") {
+      throw new Error("This relationship already exists");
+    }
+    throw new Error(error.message);
+  }
+
+  revalidatePath(`/graph/${graphId}/person/${personId}`);
+  revalidatePath(`/graph/${graphId}/person/${targetPersonId}`);
+}
+
+export async function deleteRelationship(
+  graphId: string,
+  personId: string,
+  relationshipId: string,
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  // Verify editor or owner membership
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!membership || !canEdit(membership.role)) {
+    throw new Error("Editor access required");
+  }
+
+  // Fetch the relationship to verify it involves this person
+  const { data: rel } = await supabase
+    .from("relationships")
+    .select("person_a, person_b")
+    .eq("id", relationshipId)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!rel) {
+    throw new Error("Relationship not found");
+  }
+
+  if (rel.person_a !== personId && rel.person_b !== personId) {
+    throw new Error("Relationship does not involve this person");
+  }
+
+  const otherPersonId =
+    rel.person_a === personId ? rel.person_b : rel.person_a;
+
+  const { error } = await supabase
+    .from("relationships")
+    .delete()
+    .eq("id", relationshipId)
+    .eq("graph_id", graphId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${personId}`);
+  revalidatePath(`/graph/${graphId}/person/${otherPersonId}`);
 }
