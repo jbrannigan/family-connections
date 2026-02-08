@@ -9,7 +9,7 @@ Discover how your family is connected. A full-stack family relationship app with
 - **Family Graph** — model all relationship types (biological, adoptive, step, spouse), not just a rigid tree hierarchy
 - **Person Detail Pages** — view and edit any person's info, dates, notes, and relationships with links to related persons
 - **Search & Navigation** — find anyone instantly with real-time filtering (list view) or jump-to-person with animated pan+zoom (tree view); `Cmd+K` keyboard shortcut
-- **Interactive Tree** — SVG-based tree visualization with couple nodes, pan/zoom, and click-to-navigate
+- **Interactive Tree** — SVG-based tree visualization with couple nodes, pan/zoom, click-to-navigate; toggle vertical/horizontal orientation and curved/right-angle connections
 - **QR Connect** — scan codes at family reunions to instantly see how you're related
 - **Relationship Calculator** — find the path between any two people and compute kinship (e.g. "2nd cousin once removed")
 - **Stories & Fun Facts** — add, edit, and delete stories on any person; fun fact toggle, author attribution, and relative timestamps

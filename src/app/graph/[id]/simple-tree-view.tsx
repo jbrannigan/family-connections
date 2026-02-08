@@ -8,10 +8,15 @@ import {
   type TreeDisplayNode,
 } from "@/lib/dtree-transform";
 
+export type TreeOrientation = "vertical" | "horizontal";
+export type ConnectionStyle = "curved" | "right-angle";
+
 interface SimpleTreeViewProps {
   graphId: string;
   persons: Person[];
   relationships: Relationship[];
+  orientation?: TreeOrientation;
+  connectionStyle?: ConnectionStyle;
 }
 
 export interface SimpleTreeViewHandle {
@@ -31,7 +36,16 @@ const NODE_H_SPACING = 40;
 const NODE_V_SPACING = 80;
 
 const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProps>(
-  function SimpleTreeView({ graphId, persons, relationships }, ref) {
+  function SimpleTreeView(
+    {
+      graphId,
+      persons,
+      relationships,
+      orientation = "vertical",
+      connectionStyle = "curved",
+    },
+    ref,
+  ) {
     const router = useRouter();
     const containerRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,10 +77,19 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
           const svgHeight = rect.height || 600;
 
           // Center the target node in the viewport
-          // D3 tree layout: node.y = horizontal depth, node.x = vertical sibling position
           const targetScale = 1.2;
-          const targetX = svgWidth / 2 - pos.y * targetScale;
-          const targetY = svgHeight / 2 - pos.x * targetScale;
+          let targetX: number;
+          let targetY: number;
+
+          if (orientation === "vertical") {
+            // Vertical: x is horizontal position, y is depth
+            targetX = svgWidth / 2 - pos.x * targetScale;
+            targetY = svgHeight / 2 - pos.y * targetScale;
+          } else {
+            // Horizontal: y is depth (mapped to x), x is sibling position (mapped to y)
+            targetX = svgWidth / 2 - pos.y * targetScale;
+            targetY = svgHeight / 2 - pos.x * targetScale;
+          }
 
           const transform = d3.zoomIdentity
             .translate(targetX, targetY)
@@ -94,7 +117,7 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
             .attr("stroke-width", 1.5);
         },
       }),
-      [],
+      [orientation],
     );
 
     useEffect(() => {
@@ -153,26 +176,19 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
           // Create hierarchy
           const root = d3.hierarchy(rootData);
 
-          // Count total nodes and max depth for sizing
+          // Count total nodes for sizing
           const descendants = root.descendants();
-          const maxDepth = Math.max(
-            ...descendants.map((d: any) => d.depth),
-          );
 
-          // Count nodes at each depth level
-          const nodesPerLevel: number[] = [];
-          for (const node of descendants) {
-            nodesPerLevel[node.depth] =
-              (nodesPerLevel[node.depth] || 0) + 1;
-          }
-
-          // Create tree layout (horizontal orientation: root on left)
+          // Create tree layout — nodeSize controls spacing
+          // Vertical: [horizontal spacing between siblings, vertical depth spacing]
+          // Horizontal (D3 default): [vertical spacing, horizontal depth spacing]
           const treeLayout = d3
             .tree()
-            .nodeSize([
-              NODE_HEIGHT + NODE_V_SPACING,
-              NODE_WIDTH + NODE_H_SPACING,
-            ])
+            .nodeSize(
+              orientation === "vertical"
+                ? [NODE_WIDTH + NODE_H_SPACING, NODE_HEIGHT + NODE_V_SPACING]
+                : [NODE_HEIGHT + NODE_V_SPACING, NODE_WIDTH + NODE_H_SPACING],
+            )
             .separation(() => 1.2);
 
           // Apply layout
@@ -225,28 +241,80 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
           const g = svg.append("g");
 
           // Initial transform to center the root
-          const initialX = svgWidth / 4;
-          const initialY = svgHeight / 2;
-          svg.call(
-            zoom.transform as unknown,
-            d3.zoomIdentity.translate(initialX, initialY).scale(0.8),
-          );
+          if (orientation === "vertical") {
+            // Vertical: root at top center
+            const initialX = svgWidth / 2;
+            const initialY = 80;
+            svg.call(
+              zoom.transform as unknown,
+              d3.zoomIdentity.translate(initialX, initialY).scale(0.8),
+            );
+          } else {
+            // Horizontal: root at left center
+            const initialX = svgWidth / 4;
+            const initialY = svgHeight / 2;
+            svg.call(
+              zoom.transform as unknown,
+              d3.zoomIdentity.translate(initialX, initialY).scale(0.8),
+            );
+          }
 
           // Draw links (connections between nodes)
-          const linkGenerator = d3
-            .linkHorizontal()
-            .x((d: unknown) => (d as { y: number }).y)
-            .y((d: unknown) => (d as { x: number }).x);
+          if (connectionStyle === "right-angle") {
+            // Orthogonal (right-angle) connections
+            g.selectAll(".link")
+              .data(root.links())
+              .enter()
+              .append("path")
+              .attr("class", "link")
+              .attr("d", (d: any) => {
+                if (orientation === "vertical") {
+                  // Vertical: go down from parent, then across to child
+                  const midY = (d.source.y + d.target.y) / 2;
+                  return `M${d.source.x},${d.source.y} L${d.source.x},${midY} L${d.target.x},${midY} L${d.target.x},${d.target.y}`;
+                } else {
+                  // Horizontal: go right from parent, then down/up to child
+                  const midX = (d.source.y + d.target.y) / 2;
+                  return `M${d.source.y},${d.source.x} L${midX},${d.source.x} L${midX},${d.target.x} L${d.target.y},${d.target.x}`;
+                }
+              })
+              .attr("fill", "none")
+              .attr("stroke", "#7fdb9a")
+              .attr("stroke-width", "1.5");
+          } else {
+            // Curved (Bezier) connections
+            if (orientation === "vertical") {
+              const linkGenerator = d3
+                .linkVertical()
+                .x((d: unknown) => (d as { x: number }).x)
+                .y((d: unknown) => (d as { y: number }).y);
 
-          g.selectAll(".link")
-            .data(root.links())
-            .enter()
-            .append("path")
-            .attr("class", "link")
-            .attr("d", linkGenerator as unknown as string)
-            .attr("fill", "none")
-            .attr("stroke", "#7fdb9a")
-            .attr("stroke-width", "1.5");
+              g.selectAll(".link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("d", linkGenerator as unknown as string)
+                .attr("fill", "none")
+                .attr("stroke", "#7fdb9a")
+                .attr("stroke-width", "1.5");
+            } else {
+              const linkGenerator = d3
+                .linkHorizontal()
+                .x((d: unknown) => (d as { y: number }).y)
+                .y((d: unknown) => (d as { x: number }).x);
+
+              g.selectAll(".link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "link")
+                .attr("d", linkGenerator as unknown as string)
+                .attr("fill", "none")
+                .attr("stroke", "#7fdb9a")
+                .attr("stroke-width", "1.5");
+            }
+          }
 
           // Draw nodes
           const nodes = g
@@ -257,7 +325,11 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
             .attr("class", "node")
             .attr("transform", (d: unknown) => {
               const node = d as { x: number; y: number };
-              return `translate(${node.y},${node.x})`;
+              if (orientation === "vertical") {
+                return `translate(${node.x},${node.y})`;
+              } else {
+                return `translate(${node.y},${node.x})`;
+              }
             });
 
           // Node background rectangles
@@ -335,7 +407,7 @@ const SimpleTreeView = React.forwardRef<SimpleTreeViewHandle, SimpleTreeViewProp
       return () => {
         mounted = false;
       };
-    }, [persons, relationships, graphId, router]);
+    }, [persons, relationships, graphId, router, orientation, connectionStyle]);
 
     return (
       <div className="relative w-full h-full min-h-[600px] bg-[#0a1410]">

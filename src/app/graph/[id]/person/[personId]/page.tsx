@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import PersonDetail from "./person-detail";
+import BackButton from "./back-button";
 
 export default async function PersonPage({
   params,
@@ -111,12 +112,7 @@ export default async function PersonPage({
 
       <main className="mx-auto max-w-3xl px-6 py-12">
         <div className="mb-6">
-          <Link
-            href={`/graph/${id}`}
-            className="text-sm text-white/40 transition hover:text-white/60"
-          >
-            &larr; Back to {graph.name}
-          </Link>
+          <BackButton graphId={id} graphName={graph.name} />
         </div>
 
         <PersonDetail
