@@ -7,6 +7,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-02-08
+
+### Added
+- **Undo/Redo for Edits** — session-scoped undo/redo for all person, relationship, and story mutations (Feature 023, PR #24)
+- `Cmd+Z` / `Ctrl+Z` to undo, `Cmd+Shift+Z` / `Ctrl+Shift+Z` to redo (disabled inside text inputs)
+- Toast notification after each mutation with inline "Undo" button, auto-dismisses after 5 seconds
+- `UndoProvider` React context with max 20-entry stacks, page-scoped (resets on navigation)
+- `restoreRelationship` and `restoreStory` server actions for undoing deletes
+- `createRelationship` and `createStory` now return created IDs for undo tracking
+- 14 unit tests for undo stack logic
+
+### Fixed
+- **Tree double-click zoom conflict** — disabled D3's built-in double-click-to-zoom so custom double-click-to-navigate works cleanly
+- **Back button on person detail** — replaced fragile `document.referrer`-based routing with a simple `<Link>` to the graph page
+
 ## [0.14.0] - 2026-02-08
 
 ### Added

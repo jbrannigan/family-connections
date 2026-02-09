@@ -37,7 +37,7 @@
 - [x] Validate date formats on input (v0.13.0)
 - [x] Warn about circular relationships (v0.13.0)
 - [x] Detect and merge duplicate persons (v0.14.0)
-- [ ] Undo/redo for edits
+- [x] Undo/redo for edits (v0.15.0)
 
 ---
 
@@ -58,6 +58,7 @@
 - [x] Responsive headers, padding, and touch targets across all pages
 - [x] Icon-only tree settings buttons on mobile
 - [x] Responsive form widths and tree container height
+- [ ] Preserve graph view state (zoom, scroll, view mode) when navigating back from person detail
 - [ ] Touch gestures for tree navigation (pinch-to-zoom, swipe)
 - [ ] Mobile-specific navigation (hamburger menu, bottom nav)
 - [ ] PWA/offline support
