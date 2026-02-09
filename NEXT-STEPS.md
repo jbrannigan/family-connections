@@ -24,14 +24,14 @@
 - [x] Edit display name, pronouns, dates, notes
 - [x] View all relationships for a person
 - [x] Union cards for marriages, divorces, partnerships (v0.6.0)
-- [ ] Add/remove relationships from person page
+- [x] Add/remove relationships from person page (v0.12.0)
 
 ### Search & Navigation ✅ (v0.3.0)
 - [x] Search box in tree/list views
 - [x] Jump to person in tree (animated pan+zoom)
 - [x] Cmd+K keyboard shortcut to focus search
-- [ ] Keyboard navigation (arrow keys in tree)
-- [ ] Breadcrumb showing path from root
+- [x] Keyboard navigation (arrow keys in tree) (v0.12.0)
+- [x] Breadcrumb showing path from root (v0.12.0)
 
 ### Data Validation
 - [ ] Validate date formats on input
@@ -163,4 +163,4 @@
 
 ---
 
-*Last updated: 2026-02-07*
+*Last updated: 2026-02-08*

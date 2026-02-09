@@ -7,6 +7,27 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-02-08
+
+### Added
+- **Relationship Management** — add and remove relationships directly from the person detail page (Feature 017, PR #18)
+- Inline "Add Relationship" form with type dropdown, direction selector, and searchable person combobox
+- Inline confirmation for relationship removal with "Remove? Yes / No" UI
+- `createRelationship` and `deleteRelationship` server actions with duplicate detection
+
+- **Keyboard Navigation** — arrow key navigation in the tree view (Feature 018, PR #19)
+- Arrow keys navigate parent/child/sibling (orientation-aware for vertical and horizontal layouts)
+- Enter opens person detail page, Escape clears focus
+- Single-click focuses a node (white outline), double-click opens person detail
+- Auto-pan to keep focused node in view
+- Pure traversal helpers (`findParentNode`, `findFirstChild`, `findNextSibling`) with 26 unit tests
+
+- **Breadcrumb Navigation** — path from root to focused node in tree view (Feature 019, PR #20)
+- Clickable ancestor segments that focus and pan to that node
+- Couple node names shortened for readability (e.g. "John & Margaret")
+- Auto-hides when focus is cleared, updates on arrow key navigation
+- `buildAncestorPath` and `shortenNodeName` helpers with 12 unit tests
+
 ## [0.11.1] - 2026-02-08
 
 ### Fixed
