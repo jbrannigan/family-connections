@@ -152,6 +152,11 @@ export default function DuplicatesModal({
             pair={selectedPair}
             merging={merging}
             onMerge={handleMerge}
+            onDismiss={(pair) => {
+              handleDismiss(pair);
+              setSelectedPair(null);
+              setError(null);
+            }}
             onBack={() => {
               setSelectedPair(null);
               setError(null);
@@ -254,11 +259,13 @@ function ComparisonView({
   pair,
   merging,
   onMerge,
+  onDismiss,
   onBack,
 }: {
   pair: DuplicatePair;
   merging: boolean;
   onMerge: (keepId: string, removeId: string) => void;
+  onDismiss: (pair: DuplicatePair) => void;
   onBack: () => void;
 }) {
   const { personA, personB } = pair;
@@ -329,21 +336,30 @@ function ComparisonView({
         })}
       </div>
 
-      {/* Merge buttons */}
-      <div className="flex flex-wrap gap-3">
+      {/* Action buttons */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => onMerge(personA.id, personB.id)}
+            disabled={merging}
+            className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
+          >
+            {merging ? "Merging…" : `Keep "${personA.display_name}"`}
+          </button>
+          <button
+            onClick={() => onMerge(personB.id, personA.id)}
+            disabled={merging}
+            className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
+          >
+            {merging ? "Merging…" : `Keep "${personB.display_name}"`}
+          </button>
+        </div>
         <button
-          onClick={() => onMerge(personA.id, personB.id)}
+          onClick={() => onDismiss(pair)}
           disabled={merging}
-          className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
+          className="w-full rounded-xl border border-white/20 px-4 py-2.5 text-sm font-semibold text-white/60 transition hover:bg-white/5 hover:text-white/80 disabled:opacity-50"
         >
-          {merging ? "Merging…" : `Keep "${personA.display_name}"`}
-        </button>
-        <button
-          onClick={() => onMerge(personB.id, personA.id)}
-          disabled={merging}
-          className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
-        >
-          {merging ? "Merging…" : `Keep "${personB.display_name}"`}
+          Not Duplicates
         </button>
       </div>
     </div>
