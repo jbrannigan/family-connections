@@ -127,3 +127,47 @@ export function buildNodeMap(root: HierarchyNode): NodeMap {
   walk(root);
   return map;
 }
+
+/**
+ * Build the ancestor path from root down to the given node.
+ * Returns an array of { id, name } objects from root (first) to current (last).
+ * Returns an empty array if the node is not found.
+ */
+export function buildAncestorPath(
+  nodeMap: NodeMap,
+  nodeId: string,
+): { id: string; name: string }[] {
+  const path: { id: string; name: string }[] = [];
+  let currentId: string | null = nodeId;
+
+  while (currentId) {
+    const node = nodeMap.get(currentId);
+    if (!node) break;
+    path.unshift({ id: node.data.id, name: node.data.name });
+    currentId = node.parent ? node.parent.data.id : null;
+  }
+
+  return path;
+}
+
+/**
+ * Shorten a node name for breadcrumb display.
+ *
+ * - Strips lifespan parentheticals like "(1870-1909)" or "(b. 1958)"
+ * - For couple nodes ("John McGinty & Margaret Kirk"): shows first names only ("John & Margaret")
+ * - For single nodes: returns the cleaned name as-is
+ */
+export function shortenNodeName(name: string): string {
+  // Remove parenthetical date info: (1870-1909), (b. 1958), (d. 2020), (M- ...), (Div), etc.
+  const cleaned = name.replace(/\s*\([^)]*\)/g, "").trim();
+
+  // If it's a couple node (contains " & "), extract first names
+  if (cleaned.includes(" & ")) {
+    const parts = cleaned.split(" & ");
+    const firstName1 = parts[0].trim().split(/\s+/)[0];
+    const firstName2 = parts[1].trim().split(/\s+/)[0];
+    return `${firstName1} & ${firstName2}`;
+  }
+
+  return cleaned;
+}

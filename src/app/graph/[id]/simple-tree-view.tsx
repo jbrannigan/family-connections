@@ -16,6 +16,8 @@ import {
   findNextSibling,
   keyToAction,
   buildNodeMap,
+  buildAncestorPath,
+  shortenNodeName,
   type NodeMap,
 } from "@/lib/tree-keyboard-nav";
 
@@ -671,9 +673,18 @@ const SimpleTreeView = React.forwardRef<
   return (
     <div className="relative w-full h-full min-h-[400px] sm:min-h-[600px] bg-[#0a1410]">
       {!isLoading && !error && (
-        <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20">
-          {nodeCount} family units • Scroll to zoom, drag to pan • Arrow keys to navigate, Enter to open
-        </div>
+        <>
+          <div className="absolute top-4 left-4 px-3 py-1 bg-[#1a2f25] rounded text-sm text-[#a0c0b0] border border-[#7fdb9a]/20 z-10">
+            {nodeCount} family units • Scroll to zoom, drag to pan • Arrow keys to navigate, Enter to open
+          </div>
+          {focusedNodeId && nodeMapRef.current.size > 0 && (
+            <TreeBreadcrumb
+              focusedNodeId={focusedNodeId}
+              nodeMap={nodeMapRef.current}
+              onNodeClick={setFocusedNodeId}
+            />
+          )}
+        </>
       )}
 
       <div
@@ -723,6 +734,56 @@ const SimpleTreeView = React.forwardRef<
     </div>
   );
 });
+
+// ── Breadcrumb sub-component ────────────────────────────
+
+function TreeBreadcrumb({
+  focusedNodeId,
+  nodeMap,
+  onNodeClick,
+}: {
+  focusedNodeId: string;
+  nodeMap: NodeMap;
+  onNodeClick: (nodeId: string) => void;
+}) {
+  const path = buildAncestorPath(nodeMap, focusedNodeId);
+  if (path.length === 0) return null;
+
+  return (
+    <div className="absolute top-14 left-4 z-10 max-w-[calc(100vw-2rem)] overflow-x-auto">
+      <div className="flex items-center gap-1 px-3 py-1.5 bg-[#1a2f25] rounded border border-[#7fdb9a]/20 text-sm whitespace-nowrap">
+        {path.map((segment, i) => {
+          const isLast = i === path.length - 1;
+          const shortName = shortenNodeName(segment.name);
+
+          return (
+            <React.Fragment key={segment.id}>
+              {i > 0 && (
+                <span className="text-[#7fdb9a]/40 mx-0.5">›</span>
+              )}
+              {isLast ? (
+                <span className="text-white font-medium max-w-[160px] truncate">
+                  {shortName}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNodeClick(segment.id);
+                  }}
+                  className="text-[#7fdb9a] hover:text-[#a0f0b0] hover:underline transition-colors max-w-[160px] truncate"
+                >
+                  {shortName}
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default SimpleTreeView;
 
