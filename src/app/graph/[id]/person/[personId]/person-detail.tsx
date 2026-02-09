@@ -7,7 +7,8 @@ import type { Person, Relationship, RelationshipType, StoryWithAuthor } from "@/
 import { formatDateForDisplay, validateDateInput } from "@/lib/date-utils";
 import { resolveUnions, formatUnionDateRange } from "@/lib/union-utils";
 import type { Union } from "@/lib/union-utils";
-import { updatePerson, createRelationship, deleteRelationship } from "./actions";
+import { updatePerson, createRelationship, deleteRelationship, restoreRelationship } from "./actions";
+import { useUndo } from "@/lib/undo";
 import StorySection from "./story-section";
 
 const RELATIONSHIP_TYPE_LABELS: Record<string, string> = {
@@ -132,6 +133,7 @@ export default function PersonDetail({
   const [addRelSaving, setAddRelSaving] = useState(false);
   const [addRelError, setAddRelError] = useState<string | null>(null);
 
+  const { pushAction } = useUndo();
   const grouped = groupRelationships(person.id, relationships, allPersons);
   const unions = resolveUnions(person.id, relationships, allPersons);
 
@@ -170,6 +172,21 @@ export default function PersonDetail({
       return;
     }
 
+    // Snapshot "before" state for undo
+    const beforeData = {
+      display_name: person.display_name,
+      given_name: person.given_name ?? "",
+      nickname: person.nickname ?? "",
+      preferred_name: person.preferred_name ?? "",
+      pronouns: person.pronouns ?? "",
+      birth_date: person.birth_date ?? "",
+      death_date: person.death_date ?? "",
+      birth_location: person.birth_location ?? "",
+      notes: person.notes ?? "",
+      is_incomplete: person.is_incomplete,
+    };
+    const afterData = { ...formData };
+
     setSaving(true);
     setError(null);
     try {
@@ -188,6 +205,27 @@ export default function PersonDetail({
       await updatePerson(graphId, person.id, fd);
       setMode("view");
       router.refresh();
+
+      // Push undo action
+      pushAction({
+        description: `Updated ${formData.display_name}`,
+        undo: async () => {
+          const undoFd = new FormData();
+          Object.entries(beforeData).forEach(([key, val]) => {
+            undoFd.set(key, typeof val === "boolean" ? (val ? "true" : "false") : val);
+          });
+          await updatePerson(graphId, person.id, undoFd);
+          router.refresh();
+        },
+        redo: async () => {
+          const redoFd = new FormData();
+          Object.entries(afterData).forEach(([key, val]) => {
+            redoFd.set(key, typeof val === "boolean" ? (val ? "true" : "false") : val);
+          });
+          await updatePerson(graphId, person.id, redoFd);
+          router.refresh();
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -196,12 +234,46 @@ export default function PersonDetail({
   }
 
   async function handleRemoveRelationship(relationshipId: string) {
+    // Snapshot the relationship before deleting for undo
+    const rel = relationships.find((r) => r.id === relationshipId);
+    const relSnapshot = rel
+      ? {
+          person_a: rel.person_a,
+          person_b: rel.person_b,
+          type: rel.type,
+          start_date: rel.start_date,
+          end_date: rel.end_date,
+        }
+      : null;
+    const otherPerson = rel
+      ? allPersons.find(
+          (p) =>
+            p.id === (rel.person_a === person.id ? rel.person_b : rel.person_a),
+        )
+      : null;
+
     setRemoving(true);
     setRemoveError(null);
     try {
       await deleteRelationship(graphId, person.id, relationshipId);
       setConfirmingRemoveId(null);
       router.refresh();
+
+      // Push undo action if we captured the snapshot
+      if (relSnapshot) {
+        let restoredId = relationshipId;
+        pushAction({
+          description: `Removed relationship with ${otherPerson?.display_name ?? "unknown"}`,
+          undo: async () => {
+            restoredId = await restoreRelationship(graphId, relSnapshot);
+            router.refresh();
+          },
+          redo: async () => {
+            await deleteRelationship(graphId, person.id, restoredId);
+            router.refresh();
+          },
+        });
+      }
     } catch (e) {
       setRemoveError(e instanceof Error ? e.message : "Failed to remove");
     } finally {
@@ -211,20 +283,43 @@ export default function PersonDetail({
 
   async function handleAddRelationship() {
     if (!addRelTargetId) return;
+    const targetId = addRelTargetId;
+    const type = addRelType;
+    const direction = PARENT_TYPES.has(addRelType) ? addRelDirection : "current_is_a";
+    const targetPerson = allPersons.find((p) => p.id === targetId);
+
     setAddRelSaving(true);
     setAddRelError(null);
     try {
       const fd = new FormData();
-      fd.set("type", addRelType);
-      fd.set("target_person_id", addRelTargetId);
-      fd.set("direction", PARENT_TYPES.has(addRelType) ? addRelDirection : "current_is_a");
-      await createRelationship(graphId, person.id, fd);
+      fd.set("type", type);
+      fd.set("target_person_id", targetId);
+      fd.set("direction", direction);
+      const newId = await createRelationship(graphId, person.id, fd);
       setShowAddRelForm(false);
       setAddRelType("biological_parent");
       setAddRelDirection("current_is_a");
       setAddRelTargetId(null);
       setAddRelError(null);
       router.refresh();
+
+      // Push undo action
+      let currentId = newId;
+      pushAction({
+        description: `Added relationship with ${targetPerson?.display_name ?? "unknown"}`,
+        undo: async () => {
+          await deleteRelationship(graphId, person.id, currentId);
+          router.refresh();
+        },
+        redo: async () => {
+          const redoFd = new FormData();
+          redoFd.set("type", type);
+          redoFd.set("target_person_id", targetId);
+          redoFd.set("direction", direction);
+          currentId = await createRelationship(graphId, person.id, redoFd);
+          router.refresh();
+        },
+      });
     } catch (e) {
       setAddRelError(e instanceof Error ? e.message : "Failed to add relationship");
     } finally {

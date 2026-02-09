@@ -10,6 +10,8 @@ import SettingsButton from "./settings-button";
 import GuestModeToggle from "./guest-mode-toggle";
 import GuestModeBanner from "./guest-mode-banner";
 import { GuestModeProvider, useGuestMode } from "@/lib/guest-mode";
+import { UndoProvider } from "@/lib/undo";
+import UndoToastDisplay from "@/lib/undo-toast";
 import {
   canEdit,
   canExport,
@@ -136,7 +138,10 @@ function GraphPageInner({
 export default function GraphPageClient(props: GraphPageClientProps) {
   return (
     <GuestModeProvider userId={props.userId}>
-      <GraphPageInner {...props} />
+      <UndoProvider graphId={props.graphId}>
+        <GraphPageInner {...props} />
+        <UndoToastDisplay />
+      </UndoProvider>
     </GuestModeProvider>
   );
 }

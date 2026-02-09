@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { Person, Relationship, RelationshipType } from "@/types/database";
 import { searchPersons } from "@/lib/search";
 import { getUnionLabel } from "@/lib/union-utils";
+import { useUndo } from "@/lib/undo";
 import { HighlightedText } from "./search-input";
 
 const RELATIONSHIP_TYPES: { value: RelationshipType; label: string }[] = [
@@ -68,6 +69,7 @@ export default function PersonList({
   const [relError, setRelError] = useState<string | null>(null);
 
   const router = useRouter();
+  const { pushAction } = useUndo();
 
   async function handleAddPerson(e: React.FormEvent) {
     e.preventDefault();
@@ -100,8 +102,9 @@ export default function PersonList({
     }
 
     if (data) {
+      const addedPerson = data as Person;
       setPersons((prev) =>
-        [...prev, data as Person].sort((a, b) =>
+        [...prev, addedPerson].sort((a, b) =>
           a.display_name.localeCompare(b.display_name),
         ),
       );
@@ -109,6 +112,46 @@ export default function PersonList({
       setNewPronouns("");
       setShowAddForm(false);
       router.refresh();
+
+      // Push undo action
+      pushAction({
+        description: `Added ${addedPerson.display_name}`,
+        undo: async () => {
+          const sb = createClient();
+          await sb
+            .from("persons")
+            .delete()
+            .eq("id", addedPerson.id)
+            .eq("graph_id", graphId);
+          setPersons((prev) => prev.filter((p) => p.id !== addedPerson.id));
+          router.refresh();
+        },
+        redo: async () => {
+          const sb = createClient();
+          const {
+            data: { user: u },
+          } = await sb.auth.getUser();
+          if (!u) return;
+          const { data: reinserted } = await sb
+            .from("persons")
+            .insert({
+              graph_id: graphId,
+              display_name: addedPerson.display_name,
+              pronouns: addedPerson.pronouns,
+              created_by: u.id,
+            })
+            .select()
+            .single();
+          if (reinserted) {
+            setPersons((prev) =>
+              [...prev, reinserted as Person].sort((a, b) =>
+                a.display_name.localeCompare(b.display_name),
+              ),
+            );
+            router.refresh();
+          }
+        },
+      });
     }
   }
 
@@ -146,12 +189,51 @@ export default function PersonList({
     }
 
     if (data) {
-      setRelationships((prev) => [...prev, data as Relationship]);
+      const addedRel = data as Relationship;
+      setRelationships((prev) => [...prev, addedRel]);
+      const otherPerson = persons.find((p) => p.id === relOtherId);
       setAddingRelFor(null);
       setRelOtherId("");
       setRelType("biological_parent");
       setRelError(null);
       router.refresh();
+
+      // Push undo action
+      pushAction({
+        description: `Added relationship with ${otherPerson?.display_name ?? "unknown"}`,
+        undo: async () => {
+          const sb = createClient();
+          await sb
+            .from("relationships")
+            .delete()
+            .eq("id", addedRel.id)
+            .eq("graph_id", graphId);
+          setRelationships((prev) => prev.filter((r) => r.id !== addedRel.id));
+          router.refresh();
+        },
+        redo: async () => {
+          const sb = createClient();
+          const {
+            data: { user: u },
+          } = await sb.auth.getUser();
+          if (!u) return;
+          const { data: reinserted } = await sb
+            .from("relationships")
+            .insert({
+              graph_id: graphId,
+              person_a: addedRel.person_a,
+              person_b: addedRel.person_b,
+              type: addedRel.type,
+              created_by: u.id,
+            })
+            .select()
+            .single();
+          if (reinserted) {
+            setRelationships((prev) => [...prev, reinserted as Relationship]);
+            router.refresh();
+          }
+        },
+      });
     }
   }
 
