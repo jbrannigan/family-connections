@@ -4,6 +4,7 @@ import {
   isValidDate,
   formatDateForDisplay,
   formatRelativeTime,
+  validateDateInput,
 } from "./date-utils";
 
 describe("normalizeDate", () => {
@@ -139,5 +140,99 @@ describe("formatRelativeTime", () => {
     const result = formatRelativeTime(sixtyDaysAgo);
     // Should be an absolute date like "Dec 9, 2025"
     expect(result).toMatch(/\w{3} \d{1,2}, \d{4}/);
+  });
+});
+
+// ── validateDateInput ───────────────────────────────────
+
+describe("validateDateInput", () => {
+  it("returns null for empty input (dates are optional)", () => {
+    expect(validateDateInput("")).toBeNull();
+    expect(validateDateInput("   ")).toBeNull();
+  });
+
+  it("returns null for valid year-only", () => {
+    expect(validateDateInput("1958")).toBeNull();
+    expect(validateDateInput("2000")).toBeNull();
+  });
+
+  it("returns null for valid year-month", () => {
+    expect(validateDateInput("1958-03")).toBeNull();
+    expect(validateDateInput("2000-12")).toBeNull();
+  });
+
+  it("returns null for valid full date", () => {
+    expect(validateDateInput("1958-03-15")).toBeNull();
+    expect(validateDateInput("2000-01-01")).toBeNull();
+  });
+
+  it("returns hint for short year", () => {
+    expect(validateDateInput("19")).toBe("Year must be 4 digits (e.g. 1958)");
+    expect(validateDateInput("195")).toBe("Year must be 4 digits (e.g. 1958)");
+  });
+
+  it("returns hint for single-digit month", () => {
+    expect(validateDateInput("1958-3")).toBe(
+      "Month must be 2 digits (e.g. 1958-03)",
+    );
+  });
+
+  it("returns hint for single-digit day", () => {
+    expect(validateDateInput("1958-03-5")).toBe(
+      "Day must be 2 digits (e.g. 1958-03-05)",
+    );
+  });
+
+  it("returns hint for slashes", () => {
+    expect(validateDateInput("1958/03/15")).toBe(
+      "Use hyphens, not slashes (e.g. 1958-03-15)",
+    );
+  });
+
+  it("returns generic error for unrecognized format", () => {
+    expect(validateDateInput("March 1958")).toBe(
+      "Use format: YYYY, YYYY-MM, or YYYY-MM-DD",
+    );
+    expect(validateDateInput("abc")).toBe(
+      "Use format: YYYY, YYYY-MM, or YYYY-MM-DD",
+    );
+  });
+
+  it("catches invalid month values", () => {
+    expect(validateDateInput("1958-00")).toBe(
+      "Month must be between 01 and 12",
+    );
+    expect(validateDateInput("1958-13")).toBe(
+      "Month must be between 01 and 12",
+    );
+  });
+
+  it("catches invalid day values", () => {
+    expect(validateDateInput("1958-03-00")).toBe(
+      "Day must be between 01 and 31 for month 03",
+    );
+    expect(validateDateInput("1958-03-32")).toBe(
+      "Day must be between 01 and 31 for month 03",
+    );
+    expect(validateDateInput("1958-02-30")).toBe(
+      "Day must be between 01 and 29 for month 02",
+    );
+    expect(validateDateInput("1958-04-31")).toBe(
+      "Day must be between 01 and 30 for month 04",
+    );
+  });
+
+  it("catches unrealistic years", () => {
+    expect(validateDateInput("0500")).toBe(
+      "Year should be between 1000 and 2100",
+    );
+    expect(validateDateInput("9999")).toBe(
+      "Year should be between 1000 and 2100",
+    );
+  });
+
+  it("accepts edge years", () => {
+    expect(validateDateInput("1000")).toBeNull();
+    expect(validateDateInput("2100")).toBeNull();
   });
 });

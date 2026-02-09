@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Person, Relationship, RelationshipType, StoryWithAuthor } from "@/types/database";
-import { formatDateForDisplay } from "@/lib/date-utils";
+import { formatDateForDisplay, validateDateInput } from "@/lib/date-utils";
 import { resolveUnions, formatUnionDateRange } from "@/lib/union-utils";
 import type { Union } from "@/lib/union-utils";
 import { updatePerson, createRelationship, deleteRelationship } from "./actions";
@@ -114,6 +114,10 @@ export default function PersonDetail({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dateErrors, setDateErrors] = useState<{
+    birth_date: string | null;
+    death_date: string | null;
+  }>({ birth_date: null, death_date: null });
 
   // Remove relationship state
   const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
@@ -145,15 +149,27 @@ export default function PersonDetail({
       is_incomplete: person.is_incomplete,
     });
     setError(null);
+    setDateErrors({ birth_date: null, death_date: null });
     setMode("edit");
   }
 
   function handleCancel() {
     setError(null);
+    setDateErrors({ birth_date: null, death_date: null });
     setMode("view");
   }
 
+  const hasDateErrors = dateErrors.birth_date !== null || dateErrors.death_date !== null;
+
   async function handleSave() {
+    // Validate dates before submitting
+    const birthErr = validateDateInput(formData.birth_date);
+    const deathErr = validateDateInput(formData.death_date);
+    if (birthErr || deathErr) {
+      setDateErrors({ birth_date: birthErr, death_date: deathErr });
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -554,7 +570,7 @@ export default function PersonDetail({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || hasDateErrors}
             className="rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-5 py-2 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
@@ -659,12 +675,30 @@ export default function PersonDetail({
             <input
               type="text"
               value={formData.birth_date}
-              onChange={(e) =>
-                setFormData({ ...formData, birth_date: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, birth_date: e.target.value });
+                // Clear error on change if field becomes valid or empty
+                if (dateErrors.birth_date) {
+                  const err = validateDateInput(e.target.value);
+                  if (!err) setDateErrors((prev) => ({ ...prev, birth_date: null }));
+                }
+              }}
+              onBlur={() => {
+                const err = validateDateInput(formData.birth_date);
+                setDateErrors((prev) => ({ ...prev, birth_date: err }));
+              }}
               placeholder="YYYY, YYYY-MM, or YYYY-MM-DD"
-              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
+              className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none ${
+                dateErrors.birth_date
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-white/20 focus:border-[#7fdb9a]"
+              }`}
             />
+            {dateErrors.birth_date && (
+              <p className="mt-1 text-xs text-red-400">
+                {dateErrors.birth_date}
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-white/40">
@@ -673,12 +707,29 @@ export default function PersonDetail({
             <input
               type="text"
               value={formData.death_date}
-              onChange={(e) =>
-                setFormData({ ...formData, death_date: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, death_date: e.target.value });
+                if (dateErrors.death_date) {
+                  const err = validateDateInput(e.target.value);
+                  if (!err) setDateErrors((prev) => ({ ...prev, death_date: null }));
+                }
+              }}
+              onBlur={() => {
+                const err = validateDateInput(formData.death_date);
+                setDateErrors((prev) => ({ ...prev, death_date: err }));
+              }}
               placeholder="YYYY, YYYY-MM, or YYYY-MM-DD"
-              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:border-[#7fdb9a] focus:outline-none"
+              className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none ${
+                dateErrors.death_date
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-white/20 focus:border-[#7fdb9a]"
+              }`}
             />
+            {dateErrors.death_date && (
+              <p className="mt-1 text-xs text-red-400">
+                {dateErrors.death_date}
+              </p>
+            )}
           </div>
         </div>
 
