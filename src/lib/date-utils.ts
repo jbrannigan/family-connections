@@ -38,6 +38,63 @@ export function isValidDate(dateStr: string): boolean {
 }
 
 /**
+ * Validate a date input string and return a descriptive error message,
+ * or null if the value is valid (or empty, since dates are optional).
+ *
+ * Goes beyond format checking to catch semantically invalid dates
+ * like month 13 or day 32.
+ */
+export function validateDateInput(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null; // Empty is valid (dates are optional)
+
+  // Check basic format first
+  if (normalizeDate(trimmed) === null) {
+    // Give a helpful hint based on what they typed
+    if (/^\d{1,3}$/.test(trimmed)) {
+      return "Year must be 4 digits (e.g. 1958)";
+    }
+    if (/^\d{4}-\d{1}$/.test(trimmed)) {
+      return "Month must be 2 digits (e.g. 1958-03)";
+    }
+    if (/^\d{4}-\d{2}-\d{1}$/.test(trimmed)) {
+      return "Day must be 2 digits (e.g. 1958-03-05)";
+    }
+    if (/\//.test(trimmed)) {
+      return "Use hyphens, not slashes (e.g. 1958-03-15)";
+    }
+    return "Use format: YYYY, YYYY-MM, or YYYY-MM-DD";
+  }
+
+  // Format is valid — now check semantic validity
+  const parts = trimmed.split("-");
+  const year = parseInt(parts[0], 10);
+
+  if (year < 1000 || year > 2100) {
+    return "Year should be between 1000 and 2100";
+  }
+
+  if (parts.length >= 2) {
+    const month = parseInt(parts[1], 10);
+    if (month < 1 || month > 12) {
+      return "Month must be between 01 and 12";
+    }
+
+    if (parts.length === 3) {
+      const day = parseInt(parts[2], 10);
+      // Simple max-day check per month (not accounting for leap years
+      // since we're dealing with historical dates where precision varies)
+      const maxDays = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      if (day < 1 || day > maxDays[month - 1]) {
+        return `Day must be between 01 and ${maxDays[month - 1]} for month ${parts[1]}`;
+      }
+    }
+  }
+
+  return null; // All good
+}
+
+/**
  * Format a date string for human-readable display.
  * "1958" → "1958"
  * "1958-03" → "March 1958"
