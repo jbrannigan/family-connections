@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeDate } from "@/lib/date-utils";
 import { revalidatePath } from "next/cache";
 import { canEdit, canAddStories } from "@/lib/roles";
-import type { RelationshipType } from "@/types/database";
+import type { Relationship, RelationshipType } from "@/types/database";
+import { wouldCreateCycle } from "@/lib/relationships";
 
 export async function updatePerson(
   graphId: string,
@@ -263,6 +264,24 @@ export async function createRelationship(
     // For spouse types: direction is irrelevant, store current as person_a
     personA = personId;
     personB = targetPersonId;
+  }
+
+  // Check for circular parent relationships
+  if (PARENT_TYPES.has(type)) {
+    const { data: allRels } = await supabase
+      .from("relationships")
+      .select("id, graph_id, person_a, person_b, type, start_date, end_date, created_by, created_at")
+      .eq("graph_id", graphId);
+
+    if (
+      allRels &&
+      wouldCreateCycle(personA, personB, allRels as Relationship[])
+    ) {
+      throw new Error(
+        "This relationship would create a circular ancestor chain. " +
+          "A person cannot be both an ancestor and descendant of the same person.",
+      );
+    }
   }
 
   // For spouse types, check both directions for existing duplicate

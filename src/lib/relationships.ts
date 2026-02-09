@@ -30,7 +30,7 @@ export function extractParentEdges(relationships: Relationship[]): Edge[] {
 /**
  * Build adjacency maps for traversal.
  */
-function buildAdjacency(edges: Edge[]) {
+export function buildAdjacency(edges: Edge[]) {
   const parentOf = new Map<string, Set<string>>(); // child -> parents
   const childOf = new Map<string, Set<string>>(); // parent -> children
 
@@ -220,4 +220,47 @@ export function findConnection(
     generationsB,
     label: kinshipLabel(generationsA, generationsB),
   };
+}
+
+/**
+ * Check if adding a parent→child edge would create a cycle in the
+ * ancestor graph.
+ *
+ * Returns true if the proposed child is already an ancestor of the
+ * proposed parent — meaning this edge would make someone their own
+ * ancestor.
+ */
+export function wouldCreateCycle(
+  newParentId: string,
+  newChildId: string,
+  relationships: Relationship[],
+): boolean {
+  // A person can't be their own parent
+  if (newParentId === newChildId) return true;
+
+  const edges = extractParentEdges(relationships);
+  const { parentOf } = buildAdjacency(edges);
+
+  // BFS upward from newParentId — if we reach newChildId,
+  // then newChildId is already an ancestor of newParentId,
+  // so making newChildId a child of newParentId creates a cycle.
+  const visited = new Set<string>();
+  const queue = [newParentId];
+  visited.add(newParentId);
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const parents = parentOf.get(current);
+    if (!parents) continue;
+
+    for (const parent of parents) {
+      if (parent === newChildId) return true;
+      if (!visited.has(parent)) {
+        visited.add(parent);
+        queue.push(parent);
+      }
+    }
+  }
+
+  return false;
 }
