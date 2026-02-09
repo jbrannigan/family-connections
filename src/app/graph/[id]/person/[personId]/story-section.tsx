@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StoryWithAuthor } from "@/types/database";
 import { formatRelativeTime } from "@/lib/date-utils";
-import { createStory, updateStory, deleteStory } from "./actions";
+import { createStory, updateStory, deleteStory, restoreStory } from "./actions";
+import { useUndo } from "@/lib/undo";
 
 interface StorySectionProps {
   graphId: string;
@@ -24,6 +25,7 @@ export default function StorySection({
   canAddStories = true,
 }: StorySectionProps) {
   const router = useRouter();
+  const { pushAction } = useUndo();
 
   // Add story state
   const [addingStory, setAddingStory] = useState(false);
@@ -46,17 +48,37 @@ export default function StorySection({
   const [deleting, setDeleting] = useState(false);
 
   async function handleAddStory() {
+    const content = newContent;
+    const isFunFact = newIsFunFact;
+
     setSaving(true);
     setError(null);
     try {
       const fd = new FormData();
-      fd.set("content", newContent);
-      fd.set("is_fun_fact", newIsFunFact ? "true" : "false");
-      await createStory(graphId, personId, fd);
+      fd.set("content", content);
+      fd.set("is_fun_fact", isFunFact ? "true" : "false");
+      const newId = await createStory(graphId, personId, fd);
       setNewContent("");
       setNewIsFunFact(false);
       setAddingStory(false);
       router.refresh();
+
+      // Push undo action
+      let currentId = newId;
+      pushAction({
+        description: `Added story for ${personName}`,
+        undo: async () => {
+          await deleteStory(graphId, personId, currentId);
+          router.refresh();
+        },
+        redo: async () => {
+          const redoFd = new FormData();
+          redoFd.set("content", content);
+          redoFd.set("is_fun_fact", isFunFact ? "true" : "false");
+          currentId = await createStory(graphId, personId, redoFd);
+          router.refresh();
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save story");
     } finally {
@@ -79,15 +101,41 @@ export default function StorySection({
   }
 
   async function handleUpdateStory(storyId: string) {
+    // Snapshot "before" state for undo
+    const existingStory = stories.find((s) => s.id === storyId);
+    const beforeContent = existingStory?.content ?? "";
+    const beforeIsFunFact = existingStory?.is_fun_fact ?? false;
+    const afterContent = editContent;
+    const afterIsFunFact = editIsFunFact;
+
     setEditSaving(true);
     setEditError(null);
     try {
       const fd = new FormData();
-      fd.set("content", editContent);
-      fd.set("is_fun_fact", editIsFunFact ? "true" : "false");
+      fd.set("content", afterContent);
+      fd.set("is_fun_fact", afterIsFunFact ? "true" : "false");
       await updateStory(graphId, personId, storyId, fd);
       cancelEditing();
       router.refresh();
+
+      // Push undo action
+      pushAction({
+        description: `Updated story for ${personName}`,
+        undo: async () => {
+          const undoFd = new FormData();
+          undoFd.set("content", beforeContent);
+          undoFd.set("is_fun_fact", beforeIsFunFact ? "true" : "false");
+          await updateStory(graphId, personId, storyId, undoFd);
+          router.refresh();
+        },
+        redo: async () => {
+          const redoFd = new FormData();
+          redoFd.set("content", afterContent);
+          redoFd.set("is_fun_fact", afterIsFunFact ? "true" : "false");
+          await updateStory(graphId, personId, storyId, redoFd);
+          router.refresh();
+        },
+      });
     } catch (e) {
       setEditError(e instanceof Error ? e.message : "Failed to update story");
     } finally {
@@ -96,11 +144,38 @@ export default function StorySection({
   }
 
   async function handleDeleteStory(storyId: string) {
+    // Snapshot the story before deleting for undo
+    const story = stories.find((s) => s.id === storyId);
+    const storySnapshot = story
+      ? {
+          person_id: personId,
+          content: story.content,
+          is_fun_fact: story.is_fun_fact,
+          author_id: story.author_id,
+        }
+      : null;
+
     setDeleting(true);
     try {
       await deleteStory(graphId, personId, storyId);
       setConfirmingDeleteId(null);
       router.refresh();
+
+      // Push undo action if we captured the snapshot
+      if (storySnapshot) {
+        let restoredId = storyId;
+        pushAction({
+          description: `Deleted story for ${personName}`,
+          undo: async () => {
+            restoredId = await restoreStory(graphId, storySnapshot);
+            router.refresh();
+          },
+          redo: async () => {
+            await deleteStory(graphId, personId, restoredId);
+            router.refresh();
+          },
+        });
+      }
     } catch {
       // Deletion failed — just close the confirmation
       setConfirmingDeleteId(null);

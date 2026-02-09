@@ -110,17 +110,22 @@ export async function createStory(
 
   const isFunFact = formData.get("is_fun_fact") === "true";
 
-  const { error } = await supabase.from("stories").insert({
-    graph_id: graphId,
-    person_id: personId,
-    content,
-    is_fun_fact: isFunFact,
-    author_id: user.id,
-  });
+  const { data, error } = await supabase
+    .from("stories")
+    .insert({
+      graph_id: graphId,
+      person_id: personId,
+      content,
+      is_fun_fact: isFunFact,
+      author_id: user.id,
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
 
   revalidatePath(`/graph/${graphId}/person/${personId}`);
+  return data.id;
 }
 
 export async function updateStory(
@@ -301,13 +306,17 @@ export async function createRelationship(
     }
   }
 
-  const { error } = await supabase.from("relationships").insert({
-    graph_id: graphId,
-    person_a: personA,
-    person_b: personB,
-    type,
-    created_by: user.id,
-  });
+  const { data, error } = await supabase
+    .from("relationships")
+    .insert({
+      graph_id: graphId,
+      person_a: personA,
+      person_b: personB,
+      type,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     // Handle unique constraint violation
@@ -319,6 +328,7 @@ export async function createRelationship(
 
   revalidatePath(`/graph/${graphId}/person/${personId}`);
   revalidatePath(`/graph/${graphId}/person/${targetPersonId}`);
+  return data.id;
 }
 
 export async function deleteRelationship(
@@ -374,4 +384,100 @@ export async function deleteRelationship(
 
   revalidatePath(`/graph/${graphId}/person/${personId}`);
   revalidatePath(`/graph/${graphId}/person/${otherPersonId}`);
+}
+
+// ── Restore actions (for undo of deletes) ─────────────────
+
+export async function restoreRelationship(
+  graphId: string,
+  data: {
+    person_a: string;
+    person_b: string;
+    type: string;
+    start_date: string | null;
+    end_date: string | null;
+  },
+): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!membership || !canEdit(membership.role)) {
+    throw new Error("Editor access required");
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("relationships")
+    .insert({
+      graph_id: graphId,
+      person_a: data.person_a,
+      person_b: data.person_b,
+      type: data.type,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${data.person_a}`);
+  revalidatePath(`/graph/${graphId}/person/${data.person_b}`);
+  return inserted.id;
+}
+
+export async function restoreStory(
+  graphId: string,
+  data: {
+    person_id: string;
+    content: string;
+    is_fun_fact: boolean;
+    author_id: string;
+  },
+): Promise<string> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("graph_id", graphId)
+    .single();
+
+  if (!membership || !canAddStories(membership.role)) {
+    throw new Error("Contributor access required");
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("stories")
+    .insert({
+      graph_id: graphId,
+      person_id: data.person_id,
+      content: data.content,
+      is_fun_fact: data.is_fun_fact,
+      author_id: data.author_id,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/graph/${graphId}/person/${data.person_id}`);
+  return inserted.id;
 }

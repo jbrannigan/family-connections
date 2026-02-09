@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import PersonDetail from "./person-detail";
+import PersonPageClient from "./person-page-client";
 import BackButton from "./back-button";
 import { canEdit, canAddStories } from "@/lib/roles";
 
@@ -117,16 +118,18 @@ export default async function PersonPage({
           <BackButton graphId={id} graphName={graph.name} />
         </div>
 
-        <PersonDetail
-          graphId={id}
-          person={person}
-          allPersons={allPersons ?? []}
-          relationships={relationships ?? []}
-          stories={stories}
-          isEditor={isEditor}
-          canAddStories={isContributor}
-          currentUserId={user.id}
-        />
+        <PersonPageClient graphId={id}>
+          <PersonDetail
+            graphId={id}
+            person={person}
+            allPersons={allPersons ?? []}
+            relationships={relationships ?? []}
+            stories={stories}
+            isEditor={isEditor}
+            canAddStories={isContributor}
+            currentUserId={user.id}
+          />
+        </PersonPageClient>
       </main>
     </div>
   );

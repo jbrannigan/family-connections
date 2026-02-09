@@ -324,6 +324,10 @@ const SimpleTreeView = React.forwardRef<
         zoomRef.current = zoom;
         svg.call(zoom as unknown);
 
+        // Disable d3's built-in double-click-to-zoom so it doesn't
+        // conflict with our double-click-to-navigate handler on nodes
+        svg.on("dblclick.zoom", null);
+
         // Create main group
         const g = svg.append("g");
 
