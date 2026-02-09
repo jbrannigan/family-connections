@@ -36,7 +36,7 @@
 ### Data Validation
 - [x] Validate date formats on input (v0.13.0)
 - [x] Warn about circular relationships (v0.13.0)
-- [ ] Detect and merge duplicate persons
+- [x] Detect and merge duplicate persons (v0.14.0)
 - [ ] Undo/redo for edits
 
 ---

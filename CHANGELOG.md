@@ -7,6 +7,18 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-02-08
+
+### Added
+- **Detect & Merge Duplicates** — scan for potential duplicate persons and merge them with one click (Feature 022, PR #23)
+- Name-part blocking algorithm avoids O(n²) comparisons; additive scoring: exact display name (80pts), same surname (25pts), same given name (25pts), nickname crossmatch (20pts), birth year (15pts), close year (5pts), same location (10pts), incomplete flag (5pts)
+- Side-by-side comparison view with differences highlighted in amber
+- "Keep" button merges relationships, stories, and metadata; fills null fields on keeper from removed person; concatenates notes
+- Cycle detection and duplicate relationship deduplication during merge
+- Dismissible pairs, success/error feedback, and auto-refresh after merge
+- `findDuplicates()`, `scorePair()`, `normalizeForComparison()`, `extractBirthYear()` utilities with 25 unit tests
+- `mergePersons()` server action with editor+ permission check
+
 ## [0.13.0] - 2026-02-08
 
 ### Added

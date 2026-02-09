@@ -19,6 +19,7 @@ Discover how your family is connected. A full-stack family relationship app with
 - **Guest Mode** — PIN-locked read-only toggle for safe device sharing at reunions
 - **Graph Settings** — rename graph, manage members (promote/demote/remove), transfer ownership, delete graph; owner-only
 - **Archival Export** — download your family tree as a human-readable plain-text archive (.txt) or structured JSON (.json); owner-only
+- **Duplicate Detection & Merge** — scan for potential duplicate persons with name similarity scoring; side-by-side comparison view with one-click merge that reassigns relationships, stories, and metadata
 - **TreeDown Import** — bulk import family trees from indentation-based text format with gender-based surname inference
 - **User Guide** — in-app guide at `/guide` covering all features for non-technical family members
 

@@ -1,6 +1,6 @@
 # Feature 022: Detect and Merge Duplicate Persons
 
-**Status:** In Progress
+**Status:** Complete (v0.14.0, PR #23)
 **Branch:** `feat/022-detect-merge-duplicates`
 **Priority:** 1
 
