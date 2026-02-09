@@ -5,6 +5,8 @@ import {
   findNextSibling,
   keyToAction,
   buildNodeMap,
+  buildAncestorPath,
+  shortenNodeName,
   type HierarchyNode,
   type NodeMap,
 } from "./tree-keyboard-nav";
@@ -205,5 +207,83 @@ describe("keyToAction", () => {
     expect(keyToAction("Space", "vertical")).toBeNull();
     expect(keyToAction("Tab", "horizontal")).toBeNull();
     expect(keyToAction("a", "vertical")).toBeNull();
+  });
+});
+
+// ── buildAncestorPath ────────────────────────────────────
+
+describe("buildAncestorPath", () => {
+  it("returns single element for root node", () => {
+    const { nodeMap } = buildTestTree();
+    const path = buildAncestorPath(nodeMap, "n-0");
+    expect(path).toEqual([{ id: "n-0", name: "n-0" }]);
+  });
+
+  it("returns [root, child] for child node", () => {
+    const { nodeMap } = buildTestTree();
+    const path = buildAncestorPath(nodeMap, "n-1");
+    expect(path).toEqual([
+      { id: "n-0", name: "n-0" },
+      { id: "n-1", name: "n-1" },
+    ]);
+  });
+
+  it("returns full path for grandchild", () => {
+    const { nodeMap } = buildTestTree();
+    const path = buildAncestorPath(nodeMap, "n-3");
+    expect(path).toEqual([
+      { id: "n-0", name: "n-0" },
+      { id: "n-1", name: "n-1" },
+      { id: "n-3", name: "n-3" },
+    ]);
+  });
+
+  it("returns empty array for unknown node", () => {
+    const { nodeMap } = buildTestTree();
+    const path = buildAncestorPath(nodeMap, "nonexistent");
+    expect(path).toEqual([]);
+  });
+
+  it("works with single-node tree", () => {
+    const root = makeNode("solo");
+    const nodeMap = buildNodeMap(root);
+    const path = buildAncestorPath(nodeMap, "solo");
+    expect(path).toEqual([{ id: "solo", name: "solo" }]);
+  });
+});
+
+// ── shortenNodeName ─────────────────────────────────────
+
+describe("shortenNodeName", () => {
+  it("returns simple names unchanged", () => {
+    expect(shortenNodeName("John McGinty")).toBe("John McGinty");
+  });
+
+  it("strips lifespan parentheticals", () => {
+    expect(shortenNodeName("John McGinty (1870-1909)")).toBe("John McGinty");
+  });
+
+  it("strips birth year parenthetical", () => {
+    expect(shortenNodeName("Mary Smith (b. 1958)")).toBe("Mary Smith");
+  });
+
+  it("shortens couple names to first names", () => {
+    expect(
+      shortenNodeName("John McGinty (1870-1909) & Margaret Kirk (1871-1906)"),
+    ).toBe("John & Margaret");
+  });
+
+  it("shortens couple names without dates", () => {
+    expect(shortenNodeName("John McGinty & Margaret Kirk")).toBe(
+      "John & Margaret",
+    );
+  });
+
+  it("handles single-word names in couples", () => {
+    expect(shortenNodeName("John & Margaret")).toBe("John & Margaret");
+  });
+
+  it("handles empty parentheticals", () => {
+    expect(shortenNodeName("John ()")).toBe("John");
   });
 });
