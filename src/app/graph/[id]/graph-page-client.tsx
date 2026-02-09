@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import GraphViewToggle from "./graph-view-toggle";
+import DuplicatesButton from "./duplicates-button";
 import ExportButton from "./export-button";
 import InviteButton from "./invite-button";
 import SettingsButton from "./settings-button";
@@ -10,6 +11,7 @@ import GuestModeToggle from "./guest-mode-toggle";
 import GuestModeBanner from "./guest-mode-banner";
 import { GuestModeProvider, useGuestMode } from "@/lib/guest-mode";
 import {
+  canEdit,
   canExport,
   canImport,
   canInvite,
@@ -98,6 +100,12 @@ function GraphPageInner({
                 graphId={graphId}
                 graphName={displayName}
                 role={role}
+              />
+            )}
+            {canEdit(effectiveRole) && (
+              <DuplicatesButton
+                graphId={graphId}
+                persons={persons}
               />
             )}
             {canExport(effectiveRole) && <ExportButton graphId={graphId} />}
