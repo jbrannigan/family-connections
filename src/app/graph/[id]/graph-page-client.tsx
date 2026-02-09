@@ -106,6 +106,7 @@ function GraphPageInner({
               <DuplicatesButton
                 graphId={graphId}
                 persons={persons}
+                relationships={relationships}
               />
             )}
             {canExport(effectiveRole) && <ExportButton graphId={graphId} />}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { Person } from "@/types/database";
+import type { Person, Relationship } from "@/types/database";
 import {
   normalizeForComparison,
   extractBirthYear,
@@ -26,6 +26,23 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     created_by: "user-1",
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
+  };
+}
+
+/** Helper to create a minimal Relationship for testing. */
+function makeRelationship(
+  overrides: Partial<Relationship> = {},
+): Relationship {
+  return {
+    id: overrides.id ?? crypto.randomUUID(),
+    graph_id: "test-graph",
+    person_a: overrides.person_a ?? "parent-1",
+    person_b: overrides.person_b ?? "child-1",
+    type: overrides.type ?? "biological_parent",
+    start_date: null,
+    end_date: null,
+    created_by: "user-1",
+    created_at: "2025-01-01T00:00:00Z",
   };
 }
 
@@ -66,19 +83,19 @@ describe("extractBirthYear", () => {
 });
 
 describe("scorePair", () => {
-  it("scores 80+ for exact display_name match", () => {
+  it("scores 40 for exact display_name match (not 80)", () => {
     const a = makePerson({ display_name: "Margaret McGinty" });
     const b = makePerson({ display_name: "Margaret McGinty" });
     const { score, reasons } = scorePair(a, b);
-    expect(score).toBeGreaterThanOrEqual(80);
+    expect(score).toBe(40);
     expect(reasons).toContain("Same display name");
   });
 
-  it("scores 80+ for case-insensitive display_name match", () => {
+  it("scores 40 for case-insensitive display_name match", () => {
     const a = makePerson({ display_name: "margaret mcginty" });
     const b = makePerson({ display_name: "Margaret McGinty" });
     const { score } = scorePair(a, b);
-    expect(score).toBeGreaterThanOrEqual(80);
+    expect(score).toBe(40);
   });
 
   it("scores 50 for same given name and surname (different display)", () => {
@@ -119,7 +136,7 @@ describe("scorePair", () => {
     });
     const { score, reasons } = scorePair(a, b);
     expect(reasons).toContain("Same birth year (1958)");
-    expect(score).toBeGreaterThanOrEqual(95); // 80 (name) + 15 (year)
+    expect(score).toBe(55); // 40 (name) + 15 (year)
   });
 
   it("adds 5 points for birth years within 2 years", () => {
@@ -158,19 +175,94 @@ describe("scorePair", () => {
     expect(reasons).toContain("Incomplete person record");
   });
 
-  it("does not add birth year points when years differ by >2", () => {
+  it("penalizes different generations (birth years >5 apart)", () => {
     const a = makePerson({
       display_name: "James Brannigan",
       birth_date: "1958",
     });
     const b = makePerson({
       display_name: "James Brannigan",
-      birth_date: "1985",
+      birth_date: "1932",
+    });
+    const { score, reasons } = scorePair(a, b);
+    expect(reasons).toContain("Different generations (1958 vs 1932)");
+    // 40 (name) - 25 (generation) = 15, below threshold
+    expect(score).toBe(15);
+  });
+
+  it("does not add birth year points when years differ by 3-5", () => {
+    const a = makePerson({
+      display_name: "James Brannigan",
+      birth_date: "1958",
+    });
+    const b = makePerson({
+      display_name: "James Brannigan",
+      birth_date: "1962",
     });
     const { reasons } = scorePair(a, b);
+    // 4 years apart: not same year, not within 2, not > 5 = no birth year factor
     expect(
-      reasons.some((r) => r.includes("birth year") || r.includes("Birth")),
+      reasons.some(
+        (r) =>
+          r.includes("birth year") ||
+          r.includes("Birth") ||
+          r.includes("generation"),
+      ),
     ).toBe(false);
+  });
+
+  it("adds 20 points when persons share a parent", () => {
+    const parentId = "parent-1";
+    const a = makePerson({ id: "child-a", display_name: "James Brannigan" });
+    const b = makePerson({ id: "child-b", display_name: "James Brannigan" });
+    const relationships: Relationship[] = [
+      makeRelationship({ person_a: parentId, person_b: "child-a" }),
+      makeRelationship({ person_a: parentId, person_b: "child-b" }),
+    ];
+    const { score, reasons } = scorePair(a, b, relationships);
+    expect(reasons).toContain("Share a parent");
+    expect(score).toBe(60); // 40 (name) + 20 (shared parent)
+  });
+
+  it("penalizes different parents by -30", () => {
+    const a = makePerson({ id: "child-a", display_name: "James Brannigan" });
+    const b = makePerson({ id: "child-b", display_name: "James Brannigan" });
+    const relationships: Relationship[] = [
+      makeRelationship({ person_a: "parent-1", person_b: "child-a" }),
+      makeRelationship({ person_a: "parent-2", person_b: "child-b" }),
+    ];
+    const { score, reasons } = scorePair(a, b, relationships);
+    expect(reasons).toContain("Different parents");
+    // 40 (name) - 30 (different parents) = 10
+    expect(score).toBe(10);
+  });
+
+  it("clamps score to minimum 0", () => {
+    const a = makePerson({
+      id: "child-a",
+      display_name: "James Brannigan",
+      birth_date: "1958",
+    });
+    const b = makePerson({
+      id: "child-b",
+      display_name: "James Brannigan",
+      birth_date: "1990",
+    });
+    const relationships: Relationship[] = [
+      makeRelationship({ person_a: "parent-1", person_b: "child-a" }),
+      makeRelationship({ person_a: "parent-2", person_b: "child-b" }),
+    ];
+    const { score } = scorePair(a, b, relationships);
+    // 40 (name) - 25 (generation) - 30 (parents) = -15 → clamped to 0
+    expect(score).toBe(0);
+  });
+
+  it("does not apply relationship scoring when relationships not provided", () => {
+    const a = makePerson({ id: "child-a", display_name: "James Brannigan" });
+    const b = makePerson({ id: "child-b", display_name: "James Brannigan" });
+    const { score } = scorePair(a, b);
+    // Without relationships: just name match = 40
+    expect(score).toBe(40);
   });
 });
 
@@ -183,14 +275,14 @@ describe("findDuplicates", () => {
     expect(findDuplicates([makePerson()])).toEqual([]);
   });
 
-  it("finds exact duplicates", () => {
+  it("finds exact name duplicates when above threshold", () => {
     const persons = [
       makePerson({ id: "1", display_name: "Margaret McGinty" }),
       makePerson({ id: "2", display_name: "Margaret McGinty" }),
     ];
     const dups = findDuplicates(persons);
     expect(dups).toHaveLength(1);
-    expect(dups[0].score).toBeGreaterThanOrEqual(80);
+    expect(dups[0].score).toBe(40);
   });
 
   it("returns empty when no persons share name parts", () => {
@@ -212,18 +304,17 @@ describe("findDuplicates", () => {
 
   it("sorts results by score descending", () => {
     const persons = [
-      makePerson({ id: "1", display_name: "Margaret McGinty" }),
-      makePerson({ id: "2", display_name: "Margaret McGinty" }), // exact = 80
       makePerson({
-        id: "3",
-        display_name: "Margaret Smith",
-        nickname: "Margaret",
-      }), // only given name match = 25
-      makePerson({
-        id: "4",
+        id: "1",
         display_name: "Margaret McGinty",
         birth_date: "1958",
-      }), // same + birth year
+      }),
+      makePerson({ id: "2", display_name: "Margaret McGinty" }), // exact = 40
+      makePerson({
+        id: "3",
+        display_name: "Margaret McGinty",
+        birth_date: "1958",
+      }), // exact + same year = 55
     ];
     const dups = findDuplicates(persons);
     expect(dups.length).toBeGreaterThan(0);
@@ -240,5 +331,42 @@ describe("findDuplicates", () => {
     // Given name match = 25 pts, below 40 but above 20
     const dups = findDuplicates(persons, 20);
     expect(dups.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("uses relationships for scoring when provided", () => {
+    const persons = [
+      makePerson({ id: "child-a", display_name: "James Brannigan" }),
+      makePerson({ id: "child-b", display_name: "James Brannigan" }),
+    ];
+    const relationships: Relationship[] = [
+      makeRelationship({ person_a: "parent-1", person_b: "child-a" }),
+      makeRelationship({ person_a: "parent-2", person_b: "child-b" }),
+    ];
+
+    // Without relationships: score 40 (above threshold)
+    const dupsWithout = findDuplicates(persons, 40);
+    expect(dupsWithout).toHaveLength(1);
+
+    // With relationships: score 10 (below threshold) — different parents penalty
+    const dupsWith = findDuplicates(persons, 40, relationships);
+    expect(dupsWith).toHaveLength(0);
+  });
+
+  it("filters out different-generation same-name pairs", () => {
+    const persons = [
+      makePerson({
+        id: "1",
+        display_name: "James Brannigan",
+        birth_date: "1932",
+      }),
+      makePerson({
+        id: "2",
+        display_name: "James Brannigan",
+        birth_date: "1958",
+      }),
+    ];
+    // 40 (name) - 25 (generation) = 15, below threshold
+    const dups = findDuplicates(persons);
+    expect(dups).toHaveLength(0);
   });
 });

@@ -1,5 +1,5 @@
 import { parseDisplayName } from "@/lib/name-utils";
-import type { Person } from "@/types/database";
+import type { Person, Relationship } from "@/types/database";
 
 /**
  * A pair of persons identified as potential duplicates.
@@ -9,6 +9,30 @@ export interface DuplicatePair {
   personB: Person;
   score: number;
   reasons: string[];
+}
+
+/** Relationship types where person_a is the parent. */
+const PARENT_TYPES = new Set([
+  "biological_parent",
+  "adoptive_parent",
+  "step_parent",
+]);
+
+/**
+ * Get the set of parent IDs for a person from the relationships list.
+ * In parent relationships, person_a is the parent and person_b is the child.
+ */
+function getParentIds(
+  personId: string,
+  relationships: Relationship[],
+): Set<string> {
+  const parents = new Set<string>();
+  for (const rel of relationships) {
+    if (PARENT_TYPES.has(rel.type) && rel.person_b === personId) {
+      parents.add(rel.person_a);
+    }
+  }
+  return parents;
 }
 
 /**
@@ -34,8 +58,14 @@ export function extractBirthYear(
  * Score how likely two persons are duplicates.
  * Returns a score (0–100+) and human-readable reasons.
  *
+ * In real families, the same name is extremely common across generations
+ * (naming traditions, "Jr/Sr", etc). The scoring is tuned to avoid false
+ * positives: a name match alone is NOT enough to flag duplicates. We need
+ * corroborating evidence (same birth year, shared parents) or anti-signals
+ * (different generations, different parents) to decide.
+ *
  * Scoring:
- *  - Exact display_name match (case-insensitive): 80 pts
+ *  - Exact display_name match (case-insensitive): 40 pts
  *  - Same surname (parsed): 25 pts
  *  - Same given name (parsed): 25 pts
  *  - Nickname matches other's given name: 20 pts
@@ -43,10 +73,14 @@ export function extractBirthYear(
  *  - Birth year within 2 years: 5 pts
  *  - Same birth location: 10 pts
  *  - One person is is_incomplete: 5 pts
+ *  - Share a parent: +20 pts  (strong evidence of same person)
+ *  - Different parents: -30 pts (strong evidence of different people)
+ *  - Different generations (birth years >5 apart): -25 pts
  */
 export function scorePair(
   a: Person,
   b: Person,
+  relationships?: Relationship[],
 ): { score: number; reasons: string[] } {
   let score = 0;
   const reasons: string[] = [];
@@ -54,9 +88,9 @@ export function scorePair(
   const nameA = normalizeForComparison(a.display_name);
   const nameB = normalizeForComparison(b.display_name);
 
-  // Exact display_name match
+  // Exact display_name match — common in families, not conclusive alone
   if (nameA === nameB) {
-    score += 80;
+    score += 40;
     reasons.push("Same display name");
   } else {
     // Parse names for component matching
@@ -115,6 +149,10 @@ export function scorePair(
     } else if (diff <= 2) {
       score += 5;
       reasons.push(`Birth years close (${yearA} vs ${yearB})`);
+    } else if (diff > 5) {
+      // Different generations — strong signal these are different people
+      score -= 25;
+      reasons.push(`Different generations (${yearA} vs ${yearB})`);
     }
   }
 
@@ -135,7 +173,33 @@ export function scorePair(
     reasons.push("Incomplete person record");
   }
 
-  return { score, reasons };
+  // Relationship-aware scoring (when relationships are provided)
+  if (relationships && relationships.length > 0) {
+    const parentsA = getParentIds(a.id, relationships);
+    const parentsB = getParentIds(b.id, relationships);
+
+    if (parentsA.size > 0 && parentsB.size > 0) {
+      // Check if they share any parent
+      let sharedParent = false;
+      for (const pid of parentsA) {
+        if (parentsB.has(pid)) {
+          sharedParent = true;
+          break;
+        }
+      }
+
+      if (sharedParent) {
+        score += 20;
+        reasons.push("Share a parent");
+      } else {
+        // Both have parents but they're different — very likely different people
+        score -= 30;
+        reasons.push("Different parents");
+      }
+    }
+  }
+
+  return { score: Math.max(0, score), reasons };
 }
 
 /**
@@ -146,6 +210,7 @@ export function scorePair(
 export function findDuplicates(
   persons: Person[],
   threshold = 40,
+  relationships?: Relationship[],
 ): DuplicatePair[] {
   if (persons.length < 2) return [];
 
@@ -210,7 +275,11 @@ export function findDuplicates(
 
   for (const key of candidatePairs) {
     const [ai, bi] = key.split(":").map(Number);
-    const { score, reasons } = scorePair(persons[ai], persons[bi]);
+    const { score, reasons } = scorePair(
+      persons[ai],
+      persons[bi],
+      relationships,
+    );
     if (score >= threshold) {
       results.push({
         personA: persons[ai],

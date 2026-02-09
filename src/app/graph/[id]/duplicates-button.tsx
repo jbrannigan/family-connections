@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import DuplicatesModal from "./duplicates-modal";
-import type { Person } from "@/types/database";
+import type { Person, Relationship } from "@/types/database";
 
 interface DuplicatesButtonProps {
   graphId: string;
   persons: Person[];
+  relationships: Relationship[];
 }
 
 export default function DuplicatesButton({
   graphId,
   persons,
+  relationships,
 }: DuplicatesButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -26,6 +28,7 @@ export default function DuplicatesButton({
       <DuplicatesModal
         graphId={graphId}
         persons={persons}
+        relationships={relationships}
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
       />

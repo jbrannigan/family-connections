@@ -4,11 +4,12 @@ import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { findDuplicates, type DuplicatePair } from "@/lib/duplicate-detection";
 import { mergePersons } from "./merge-actions";
-import type { Person } from "@/types/database";
+import type { Person, Relationship } from "@/types/database";
 
 interface DuplicatesModalProps {
   graphId: string;
   persons: Person[];
+  relationships: Relationship[];
   isOpen: boolean;
   onClose: () => void;
 }
@@ -37,6 +38,7 @@ const COMPARE_FIELDS: { key: keyof Person; label: string }[] = [
 export default function DuplicatesModal({
   graphId,
   persons,
+  relationships,
   isOpen,
   onClose,
 }: DuplicatesModalProps) {
@@ -46,8 +48,8 @@ export default function DuplicatesModal({
   // Compute duplicates on first render when modal opens
   const duplicates = useMemo(() => {
     if (!isOpen) return [];
-    return findDuplicates(persons);
-  }, [isOpen, persons]);
+    return findDuplicates(persons, 40, relationships);
+  }, [isOpen, persons, relationships]);
 
   const [selectedPair, setSelectedPair] = useState<DuplicatePair | null>(null);
   const [merging, setMerging] = useState(false);
@@ -255,6 +257,21 @@ function ResultsListView({
   );
 }
 
+/**
+ * Count how many of the compare fields have a non-null, non-empty value.
+ * Higher = more complete record.
+ */
+function completenessScore(person: Person): number {
+  let filled = 0;
+  for (const { key } of COMPARE_FIELDS) {
+    const val = person[key];
+    if (val !== null && val !== undefined && val !== "" && val !== false) {
+      filled++;
+    }
+  }
+  return filled;
+}
+
 function ComparisonView({
   pair,
   merging,
@@ -269,6 +286,16 @@ function ComparisonView({
   onBack: () => void;
 }) {
   const { personA, personB } = pair;
+
+  // Auto-select the more complete record as primary
+  const aScore = completenessScore(personA);
+  const bScore = completenessScore(personB);
+  const defaultPrimary = aScore >= bScore ? "a" : "b";
+
+  const [primary, setPrimary] = useState<"a" | "b">(defaultPrimary);
+
+  const keepPerson = primary === "a" ? personA : personB;
+  const removePerson = primary === "a" ? personB : personA;
 
   return (
     <div>
@@ -295,18 +322,42 @@ function ComparisonView({
       </div>
 
       {/* Comparison table */}
-      <div className="mb-6 overflow-hidden rounded-xl border border-white/10">
-        {/* Column headers */}
+      <div className="mb-4 overflow-hidden rounded-xl border border-white/10">
+        {/* Column headers — primary column is highlighted */}
         <div className="grid grid-cols-[120px_1fr_1fr] border-b border-white/10 bg-white/5">
           <div className="px-3 py-2 text-xs font-semibold text-white/50">
             Field
           </div>
-          <div className="border-l border-white/10 px-3 py-2 text-xs font-semibold text-[#7fdb9a]">
-            Person A
-          </div>
-          <div className="border-l border-white/10 px-3 py-2 text-xs font-semibold text-[#7fdb9a]">
-            Person B
-          </div>
+          <button
+            onClick={() => setPrimary("a")}
+            className={`border-l border-white/10 px-3 py-2 text-left text-xs font-semibold transition ${
+              primary === "a"
+                ? "bg-[#7fdb9a]/10 text-[#7fdb9a]"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            <span className="truncate">{personA.display_name}</span>
+            {primary === "a" && (
+              <span className="ml-1.5 text-[10px] font-normal opacity-60">
+                primary
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setPrimary("b")}
+            className={`border-l border-white/10 px-3 py-2 text-left text-xs font-semibold transition ${
+              primary === "b"
+                ? "bg-[#7fdb9a]/10 text-[#7fdb9a]"
+                : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            <span className="truncate">{personB.display_name}</span>
+            {primary === "b" && (
+              <span className="ml-1.5 text-[10px] font-normal opacity-60">
+                primary
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Field rows */}
@@ -325,10 +376,18 @@ function ComparisonView({
               }`}
             >
               <div className="px-3 py-2 text-xs text-white/40">{label}</div>
-              <div className="break-words border-l border-white/5 px-3 py-2 text-sm">
+              <div
+                className={`break-words border-l border-white/5 px-3 py-2 text-sm ${
+                  primary === "a" ? "bg-[#7fdb9a]/5" : ""
+                }`}
+              >
                 {displayValue(valA as string | null | boolean)}
               </div>
-              <div className="break-words border-l border-white/5 px-3 py-2 text-sm">
+              <div
+                className={`break-words border-l border-white/5 px-3 py-2 text-sm ${
+                  primary === "b" ? "bg-[#7fdb9a]/5" : ""
+                }`}
+              >
                 {displayValue(valB as string | null | boolean)}
               </div>
             </div>
@@ -338,22 +397,18 @@ function ComparisonView({
 
       {/* Action buttons */}
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => onMerge(personA.id, personB.id)}
-            disabled={merging}
-            className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
-          >
-            {merging ? "Merging…" : `Keep "${personA.display_name}"`}
-          </button>
-          <button
-            onClick={() => onMerge(personB.id, personA.id)}
-            disabled={merging}
-            className="flex-1 rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
-          >
-            {merging ? "Merging…" : `Keep "${personB.display_name}"`}
-          </button>
-        </div>
+        <p className="text-xs text-white/40">
+          Merging combines both records into one, preserving all relationships
+          and stories. The primary record&apos;s details take priority where they
+          differ. Tap a column header to change which is primary.
+        </p>
+        <button
+          onClick={() => onMerge(keepPerson.id, removePerson.id)}
+          disabled={merging}
+          className="w-full rounded-xl bg-gradient-to-br from-[#7fdb9a] to-[#4a9d6a] px-4 py-2.5 text-sm font-semibold text-[#0f1a14] transition hover:opacity-90 disabled:opacity-50"
+        >
+          {merging ? "Merging…" : "Merge Records"}
+        </button>
         <button
           onClick={() => onDismiss(pair)}
           disabled={merging}
