@@ -1,6 +1,6 @@
 # Feature 020: Validate Date Formats on Input
 
-**Status:** In Progress
+**Status:** Complete (v0.13.0, PR #21)
 **Branch:** `feat/020-date-input-validation`
 **Priority:** 1
 

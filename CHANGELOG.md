@@ -7,6 +7,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-02-08
+
+### Added
+- **Date Input Validation** — inline format validation on person edit date fields (Feature 020, PR #21)
+- Validates on blur with contextual error messages (e.g. "Year must be 4 digits", "Use hyphens, not slashes")
+- Red border and error text below invalid fields, save button disabled until fixed
+- `validateDateInput()` utility with semantic checks (month/day ranges, year bounds) and 13 unit tests
+
+- **Circular Relationship Warning** — prevents impossible ancestor chains (Feature 021, PR #22)
+- Cycle detection using BFS upward traversal when adding parent-type relationships
+- Clear error message: "This relationship would create a circular ancestor chain"
+- `wouldCreateCycle()` utility with 10 unit tests
+
 ## [0.12.0] - 2026-02-08
 
 ### Added

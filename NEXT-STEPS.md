@@ -34,8 +34,8 @@
 - [x] Breadcrumb showing path from root (v0.12.0)
 
 ### Data Validation
-- [ ] Validate date formats on input
-- [ ] Warn about circular relationships
+- [x] Validate date formats on input (v0.13.0)
+- [x] Warn about circular relationships (v0.13.0)
 - [ ] Detect and merge duplicate persons
 - [ ] Undo/redo for edits
 

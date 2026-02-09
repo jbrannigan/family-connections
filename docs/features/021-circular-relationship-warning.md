@@ -1,6 +1,6 @@
 # Feature 021: Warn About Circular Relationships
 
-**Status:** In Progress
+**Status:** Complete (v0.13.0, PR #22)
 **Branch:** `feat/021-circular-relationship-warning`
 **Priority:** 1
 
