@@ -7,6 +7,17 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-02-09
+
+### Added
+- **Profile Management** — edit display name, upload avatar, view your graphs (Feature 024, PR #25)
+- Profile page at `/dashboard/profile` with avatar upload (JPEG/PNG/WebP, max 2MB via Supabase Storage)
+- Dashboard header shows clickable avatar + display name instead of raw email
+- `UserAvatar` shared component with `next/image` and initial-letter fallback
+- `avatars` Supabase Storage bucket with RLS policies (users can only write to their own folder)
+- Members modal in graph settings now displays avatar images
+- Server actions: `updateDisplayName`, `updateAvatarUrl`, `deleteAvatar`
+
 ## [0.15.0] - 2026-02-08
 
 ### Added
