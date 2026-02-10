@@ -31,6 +31,8 @@ stories: id (uuid PK), graph_id (FK), person_id (FK persons), content, is_fun_fa
 profiles: id (uuid PK, FK auth.users), display_name, avatar_url
 ```
 
+**Supabase Storage:** `avatars` bucket (public). Files stored at `{userId}/avatar.{ext}`. RLS restricts write/delete to own folder.
+
 **Note**: Date columns use `text` type to support ISO 8601 reduced precision (year-only "1958", year-month "1958-03", or full "1958-03-15").
 
 ### Relationship Types
@@ -74,6 +76,10 @@ src/
       new/page.tsx                    — Create new graph form
       join/page.tsx                   — Join graph via invite code
       sign-out-button.tsx             — Client sign-out button
+      profile/
+        page.tsx                      — Profile page (edit name, avatar, view graphs)
+        profile-form.tsx              — Profile edit form (client component)
+        actions.ts                    — Profile server actions (updateDisplayName, deleteAvatar, etc.)
     graph/[id]/
       page.tsx                        — Graph detail page (server component)
       graph-view-toggle.tsx           — Client toggle between Tree View and List View
@@ -90,6 +96,8 @@ src/
     import-treedown.ts                — TreeDown format parser with gender inference
     name-utils.ts                     — Name parsing (parseDisplayName, getDisplayParts)
     relationships.ts                  — Kinship path finder (cousin degree, etc.)
+  components/
+    user-avatar.tsx                   — Shared avatar component (image or initial letter fallback)
   types/
     database.ts                       — TypeScript types for all DB tables
   middleware.ts                       — Next.js middleware (Supabase session refresh)

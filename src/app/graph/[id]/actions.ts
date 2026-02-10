@@ -184,7 +184,7 @@ export async function getMembers(graphId: string): Promise<MemberInfo[]> {
 
   const { data, error } = await supabase
     .from("memberships")
-    .select("user_id, role, created_at, profiles(display_name)")
+    .select("user_id, role, created_at, profiles(display_name, avatar_url)")
     .eq("graph_id", graphId)
     .order("created_at");
 
@@ -192,12 +192,16 @@ export async function getMembers(graphId: string): Promise<MemberInfo[]> {
 
   return (data ?? []).map((row) => {
     // profiles is a joined object (many-to-one via user_id FK)
-    const profile = row.profiles as unknown as { display_name: string | null } | null;
+    const profile = row.profiles as unknown as {
+      display_name: string | null;
+      avatar_url: string | null;
+    } | null;
     return {
       user_id: row.user_id,
       role: row.role as MemberRole,
       created_at: row.created_at,
       display_name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
     };
   });
 }

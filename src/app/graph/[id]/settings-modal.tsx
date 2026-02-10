@@ -10,6 +10,7 @@ import {
   transferOwnership,
 } from "./actions";
 import { getRoleLabel } from "@/lib/roles";
+import UserAvatar from "@/components/user-avatar";
 import type { MemberRole, MemberInfo } from "@/types/database";
 
 type SettingsTab = "general" | "members" | "danger";
@@ -314,10 +315,7 @@ function MembersTab({
               key={member.user_id}
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-white/5"
             >
-              {/* Avatar placeholder */}
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold text-white/60">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar url={member.avatar_url} name={displayName} size="sm" />
 
               {/* Name */}
               <div className="min-w-0 flex-1">

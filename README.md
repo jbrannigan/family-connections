@@ -13,6 +13,7 @@ Discover how your family is connected. A full-stack family relationship app with
 - **QR Connect** — scan codes at family reunions to instantly see how you're related
 - **Relationship Calculator** — find the path between any two people and compute kinship (e.g. "2nd cousin once removed")
 - **Stories & Fun Facts** — add, edit, and delete stories on any person; fun fact toggle, author attribution, and relative timestamps
+- **Profile Management** — edit display name, upload avatar photo; profile link in dashboard header
 - **Authentication** — password-based sign-in via Supabase Auth
 - **4-Tier Roles** — Owner, Editor, Contributor, Viewer with granular permissions enforced by RLS
 - **Invite Links** — shareable URLs with role baked in; QR code generation for family reunions

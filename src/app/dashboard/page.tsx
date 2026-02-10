@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import SignOutButton from "./sign-out-button";
+import UserAvatar from "@/components/user-avatar";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -10,6 +11,15 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/login");
+
+  // Fetch user's profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("display_name, avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  const profileName = profile?.display_name || user.email || "User";
 
   // Fetch user's family graphs via memberships
   const { data: memberships } = await supabase
@@ -45,7 +55,19 @@ export default async function DashboardPage() {
             >
               Guide
             </Link>
-            <span className="hidden text-sm text-white/50 sm:inline">{user.email}</span>
+            <Link
+              href="/dashboard/profile"
+              className="flex items-center gap-2 rounded-lg px-2 py-1 transition hover:bg-white/5"
+            >
+              <UserAvatar
+                url={profile?.avatar_url}
+                name={profileName}
+                size="sm"
+              />
+              <span className="hidden text-sm text-white/50 sm:inline">
+                {profileName}
+              </span>
+            </Link>
             <SignOutButton />
           </div>
         </div>
