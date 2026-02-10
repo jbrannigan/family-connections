@@ -90,4 +90,5 @@ export interface MemberInfo {
   role: MemberRole;
   created_at: string;
   display_name: string | null;
+  avatar_url: string | null;
 }

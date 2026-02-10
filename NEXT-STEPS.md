@@ -49,10 +49,10 @@
 - [x] Manage members (invite, remove, change roles)
 - [x] Delete graph (with typed confirmation)
 
-### Profile Management
-- [ ] Edit user display name
-- [ ] Upload avatar
-- [ ] View graphs user belongs to
+### Profile Management ✅ (v0.16.0)
+- [x] Edit user display name
+- [x] Upload avatar
+- [x] View graphs user belongs to
 
 ### Mobile Responsiveness ✅ (v0.11.1)
 - [x] Responsive headers, padding, and touch targets across all pages
@@ -101,6 +101,7 @@
 - [x] Structured person name fields (given_name, nickname, preferred_name)
 - [x] Ancestor view — select a person and view their direct ancestral line as an ascending pedigree chart
 - [x] Descendant view — select a person and show only their descendants
+- [ ] Compact node sizing — dynamically size boxes or wrap text for long names instead of clipping
 - [ ] Collapse/expand subtrees
 - [ ] Highlight search results
 - [ ] Different color themes
