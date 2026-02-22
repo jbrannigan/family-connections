@@ -98,11 +98,11 @@ describe("scorePair", () => {
     expect(score).toBe(40);
   });
 
-  it("scores 50 for same given name and surname (different display)", () => {
+  it("scores 40 for same given name and surname (different display)", () => {
     const a = makePerson({ display_name: "Margaret (Peggy) McGinty" });
     const b = makePerson({ display_name: "Margaret McGinty" });
     const { score, reasons } = scorePair(a, b);
-    expect(score).toBe(50);
+    expect(score).toBe(40); // given (25) + surname (15)
     expect(reasons).toContain("Same surname");
     expect(reasons).toContain("Same given name");
   });
@@ -115,7 +115,7 @@ describe("scorePair", () => {
     const b = makePerson({ display_name: "Peggy McGinty" });
     const { score, reasons } = scorePair(a, b);
     expect(reasons).toContain("Nickname matches given name");
-    expect(score).toBeGreaterThanOrEqual(45); // surname (25) + nickname match (20)
+    expect(score).toBeGreaterThanOrEqual(35); // surname (15) + nickname match (20)
   });
 
   it("scores 0 for completely different persons", () => {
@@ -275,14 +275,25 @@ describe("findDuplicates", () => {
     expect(findDuplicates([makePerson()])).toEqual([]);
   });
 
-  it("finds exact name duplicates when above threshold", () => {
+  it("does NOT flag exact name alone (score 40, below threshold 50)", () => {
     const persons = [
       makePerson({ id: "1", display_name: "Margaret McGinty" }),
       makePerson({ id: "2", display_name: "Margaret McGinty" }),
     ];
+    // Exact name = 40, default threshold = 50 → not flagged
+    const dups = findDuplicates(persons);
+    expect(dups).toHaveLength(0);
+  });
+
+  it("flags exact name + corroborating evidence (same birth year)", () => {
+    const persons = [
+      makePerson({ id: "1", display_name: "Margaret McGinty", birth_date: "1958" }),
+      makePerson({ id: "2", display_name: "Margaret McGinty", birth_date: "1958" }),
+    ];
+    // 40 (name) + 15 (year) = 55, above threshold
     const dups = findDuplicates(persons);
     expect(dups).toHaveLength(1);
-    expect(dups[0].score).toBe(40);
+    expect(dups[0].score).toBe(55);
   });
 
   it("returns empty when no persons share name parts", () => {
@@ -294,7 +305,7 @@ describe("findDuplicates", () => {
   });
 
   it("excludes pairs below threshold", () => {
-    // Same given name only = 25 pts, below default threshold of 40
+    // Same given name only = 25 pts, below default threshold of 50
     const persons = [
       makePerson({ id: "1", display_name: "James Brannigan" }),
       makePerson({ id: "2", display_name: "James Rodriguez" }),
@@ -308,13 +319,19 @@ describe("findDuplicates", () => {
         id: "1",
         display_name: "Margaret McGinty",
         birth_date: "1958",
+        birth_location: "Brooklyn, NY",
       }),
-      makePerson({ id: "2", display_name: "Margaret McGinty" }), // exact = 40
+      makePerson({
+        id: "2",
+        display_name: "Margaret McGinty",
+        birth_date: "1958",
+      }), // exact + same year = 55
       makePerson({
         id: "3",
         display_name: "Margaret McGinty",
         birth_date: "1958",
-      }), // exact + same year = 55
+        birth_location: "Brooklyn, NY",
+      }), // exact + same year + same location = 65
     ];
     const dups = findDuplicates(persons);
     expect(dups.length).toBeGreaterThan(0);
@@ -343,12 +360,12 @@ describe("findDuplicates", () => {
       makeRelationship({ person_a: "parent-2", person_b: "child-b" }),
     ];
 
-    // Without relationships: score 40 (above threshold)
-    const dupsWithout = findDuplicates(persons, 40);
+    // Without relationships: score 40 (above custom threshold of 30)
+    const dupsWithout = findDuplicates(persons, 30);
     expect(dupsWithout).toHaveLength(1);
 
     // With relationships: score 10 (below threshold) — different parents penalty
-    const dupsWith = findDuplicates(persons, 40, relationships);
+    const dupsWith = findDuplicates(persons, 30, relationships);
     expect(dupsWith).toHaveLength(0);
   });
 
@@ -368,5 +385,43 @@ describe("findDuplicates", () => {
     // 40 (name) - 25 (generation) = 15, below threshold
     const dups = findDuplicates(persons);
     expect(dups).toHaveLength(0);
+  });
+
+  it("does not flag same given+surname without corroboration (family naming patterns)", () => {
+    // 4 "James McGinty"s across generations — common in Irish families
+    const persons = [
+      makePerson({ id: "1", display_name: "James McGinty" }),
+      makePerson({ id: "2", display_name: "James McGinty" }),
+      makePerson({ id: "3", display_name: "James McGinty" }),
+      makePerson({ id: "4", display_name: "James McGinty" }),
+    ];
+    // Each pair scores 40 (exact name), below threshold of 50
+    const dups = findDuplicates(persons);
+    expect(dups).toHaveLength(0);
+  });
+
+  it("flags same name with incomplete record as corroboration", () => {
+    const persons = [
+      makePerson({ id: "1", display_name: "James McGinty" }),
+      makePerson({ id: "2", display_name: "James McGinty", is_incomplete: true }),
+    ];
+    // 40 (name) + 5 (incomplete) = 45, still below 50
+    const dups = findDuplicates(persons);
+    expect(dups).toHaveLength(0);
+  });
+
+  it("flags same name + shared parent as likely duplicate", () => {
+    const persons = [
+      makePerson({ id: "child-a", display_name: "James McGinty" }),
+      makePerson({ id: "child-b", display_name: "James McGinty" }),
+    ];
+    const relationships: Relationship[] = [
+      makeRelationship({ person_a: "parent-1", person_b: "child-a" }),
+      makeRelationship({ person_a: "parent-1", person_b: "child-b" }),
+    ];
+    // 40 (name) + 20 (shared parent) = 60, above threshold
+    const dups = findDuplicates(persons, 50, relationships);
+    expect(dups).toHaveLength(1);
+    expect(dups[0].score).toBe(60);
   });
 });

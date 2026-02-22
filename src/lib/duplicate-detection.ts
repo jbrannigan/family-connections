@@ -66,7 +66,7 @@ export function extractBirthYear(
  *
  * Scoring:
  *  - Exact display_name match (case-insensitive): 40 pts
- *  - Same surname (parsed): 25 pts
+ *  - Same surname (parsed): 15 pts  (low — shared surnames are normal in family trees)
  *  - Same given name (parsed): 25 pts
  *  - Nickname matches other's given name: 20 pts
  *  - Same birth year: 15 pts
@@ -76,6 +76,8 @@ export function extractBirthYear(
  *  - Share a parent: +20 pts  (strong evidence of same person)
  *  - Different parents: -30 pts (strong evidence of different people)
  *  - Different generations (birth years >5 apart): -25 pts
+ *
+ * Default threshold: 50 (requires corroborating evidence beyond just name match)
  */
 export function scorePair(
   a: Person,
@@ -107,7 +109,7 @@ export function scorePair(
       : null;
 
     if (surnameA && surnameB && surnameA === surnameB) {
-      score += 25;
+      score += 15;
       reasons.push("Same surname");
     }
 
@@ -205,11 +207,11 @@ export function scorePair(
 /**
  * Find all potential duplicate pairs among a list of persons.
  * Uses name-part blocking to avoid O(n²) full comparisons.
- * Returns pairs sorted by score descending, filtered by threshold ≥ 40.
+ * Returns pairs sorted by score descending, filtered by threshold ≥ 50.
  */
 export function findDuplicates(
   persons: Person[],
-  threshold = 40,
+  threshold = 50,
   relationships?: Relationship[],
 ): DuplicatePair[] {
   if (persons.length < 2) return [];

@@ -48,20 +48,24 @@ export default function DuplicatesModal({
   // Compute duplicates on first render when modal opens
   const duplicates = useMemo(() => {
     if (!isOpen) return [];
-    return findDuplicates(persons, 40, relationships);
+    return findDuplicates(persons, 50, relationships);
   }, [isOpen, persons, relationships]);
 
   const [selectedPair, setSelectedPair] = useState<DuplicatePair | null>(null);
   const [merging, setMerging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [dismissedPairs, setDismissedPairs] = useState<Set<string>>(new Set());
+  // Persist dismissed pairs across modal open/close using ref (survives re-renders)
+  const dismissedPairsRef = useRef<Set<string>>(new Set());
+  // Bumped on dismiss to trigger re-render (ref mutations don't cause re-renders)
+  const [, setDismissedVersion] = useState(0);
 
   if (!isOpen) return null;
 
   const activeDuplicates = duplicates.filter(
     (d) =>
-      !dismissedPairs.has(`${d.personA.id}:${d.personB.id}`),
+      !dismissedPairsRef.current.has(`${d.personA.id}:${d.personB.id}`) &&
+      !dismissedPairsRef.current.has(`${d.personB.id}:${d.personA.id}`),
   );
 
   function handleBackdropClick(e: React.MouseEvent) {
@@ -74,14 +78,24 @@ export default function DuplicatesModal({
     setSelectedPair(null);
     setError(null);
     setSuccessMessage(null);
-    setDismissedPairs(new Set());
+    // Don't clear dismissed pairs — they persist across modal open/close
     onClose();
   }
 
   function handleDismiss(pair: DuplicatePair) {
-    setDismissedPairs(
-      (prev) => new Set([...prev, `${pair.personA.id}:${pair.personB.id}`]),
+    dismissedPairsRef.current.add(`${pair.personA.id}:${pair.personB.id}`);
+    // Bump version to trigger re-render (ref changes don't cause re-renders)
+    setDismissedVersion((v) => v + 1);
+
+    // Auto-close modal when all pairs have been dismissed
+    const remaining = duplicates.filter(
+      (d) =>
+        !dismissedPairsRef.current.has(`${d.personA.id}:${d.personB.id}`) &&
+        !dismissedPairsRef.current.has(`${d.personB.id}:${d.personA.id}`),
     );
+    if (remaining.length === 0) {
+      handleClose();
+    }
   }
 
   async function handleMerge(keepId: string, removeId: string) {

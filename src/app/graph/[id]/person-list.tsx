@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Person, Relationship, RelationshipType } from "@/types/database";
-import { searchPersons } from "@/lib/search";
+import { searchPersons, type PersonSearchResult } from "@/lib/search";
 import { getUnionLabel } from "@/lib/union-utils";
 import { useUndo } from "@/lib/undo";
 import { HighlightedText } from "./search-input";
@@ -254,11 +254,14 @@ export default function PersonList({
   }
 
   // Search filtering
-  const searchResults = searchQuery.trim()
+  const searchResults: PersonSearchResult[] = searchQuery.trim()
     ? searchPersons(persons, searchQuery)
     : persons.map((p) => ({ person: p, matchRanges: [] }));
   const matchRangeMap = new Map(
     searchResults.map((r) => [r.person.id, r.matchRanges]),
+  );
+  const matchedFieldMap = new Map(
+    searchResults.filter((r) => r.matchedField).map((r) => [r.person.id, r.matchedField!]),
   );
   const displayPersons = searchResults.map((r) => r.person);
 
@@ -370,6 +373,15 @@ export default function PersonList({
                       text={person.display_name}
                       ranges={matchRangeMap.get(person.id) ?? []}
                     />
+                    {matchedFieldMap.has(person.id) && (
+                      <span className="ml-2 text-xs font-normal text-[#7fdb9a]/60">
+                        aka {matchedFieldMap.get(person.id) === "nickname"
+                          ? person.nickname
+                          : matchedFieldMap.get(person.id) === "given_name"
+                            ? person.given_name
+                            : person.preferred_name}
+                      </span>
+                    )}
                   </Link>
                   {person.is_incomplete && (
                     <span className="rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-400">

@@ -175,6 +175,15 @@ export default function SearchInput({
                   text={result.person.display_name}
                   ranges={result.matchRanges}
                 />
+                {result.matchedField && (
+                  <span className="ml-2 text-xs text-[#7fdb9a]/60">
+                    aka {result.matchedField === "nickname"
+                      ? result.person.nickname
+                      : result.matchedField === "given_name"
+                        ? result.person.given_name
+                        : result.person.preferred_name}
+                  </span>
+                )}
               </span>
               {result.person.birth_date && (
                 <span className="text-xs text-white/30">

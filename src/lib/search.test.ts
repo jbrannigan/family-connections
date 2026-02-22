@@ -2,14 +2,17 @@ import { describe, it, expect } from "vitest";
 import { searchPersons } from "./search";
 import type { Person } from "@/types/database";
 
-function makePerson(name: string, id?: string): Person {
+function makePerson(
+  name: string,
+  overrides?: Partial<Pick<Person, "nickname" | "given_name" | "preferred_name">> & { id?: string },
+): Person {
   return {
-    id: id ?? name.toLowerCase().replace(/\s/g, "-"),
+    id: overrides?.id ?? name.toLowerCase().replace(/\s/g, "-"),
     graph_id: "test-graph",
     display_name: name,
-    given_name: null,
-    nickname: null,
-    preferred_name: null,
+    given_name: overrides?.given_name ?? null,
+    nickname: overrides?.nickname ?? null,
+    preferred_name: overrides?.preferred_name ?? null,
     avatar_url: null,
     pronouns: null,
     birth_date: null,
@@ -25,12 +28,12 @@ function makePerson(name: string, id?: string): Person {
 
 const testPersons: Person[] = [
   makePerson("John McGinty"),
-  makePerson("Margaret Kirk"),
+  makePerson("Margaret Kirk", { nickname: "Peggy" }),
   makePerson("James Lynch McGinty"),
-  makePerson("Mary Elizabeth McGinty"),
+  makePerson("Mary Elizabeth McGinty", { preferred_name: "Lizzy" }),
   makePerson("Thomas Kirk McGinty"),
   makePerson("Alice Moran"),
-  makePerson("John Smith"),
+  makePerson("John Smith", { given_name: "Jonathan" }),
 ];
 
 describe("searchPersons", () => {
@@ -113,5 +116,59 @@ describe("searchPersons", () => {
   it("handles single-character query", () => {
     const results = searchPersons(testPersons, "A");
     expect(results.map((r) => r.person.display_name)).toContain("Alice Moran");
+  });
+
+  // Nickname / alternate field search tests
+
+  it("matches on nickname field", () => {
+    const results = searchPersons(testPersons, "Peggy");
+    expect(results).toHaveLength(1);
+    expect(results[0].person.display_name).toBe("Margaret Kirk");
+    expect(results[0].matchedField).toBe("nickname");
+    expect(results[0].matchRanges).toEqual([]);
+  });
+
+  it("matches on preferred_name field", () => {
+    const results = searchPersons(testPersons, "Lizzy");
+    expect(results).toHaveLength(1);
+    expect(results[0].person.display_name).toBe("Mary Elizabeth McGinty");
+    expect(results[0].matchedField).toBe("preferred_name");
+  });
+
+  it("matches on given_name field", () => {
+    const results = searchPersons(testPersons, "Jonathan");
+    expect(results).toHaveLength(1);
+    expect(results[0].person.display_name).toBe("John Smith");
+    expect(results[0].matchedField).toBe("given_name");
+  });
+
+  it("prefers display_name match over alternate field match", () => {
+    const results = searchPersons(testPersons, "Margaret");
+    expect(results).toHaveLength(1);
+    expect(results[0].person.display_name).toBe("Margaret Kirk");
+    // Matched on display_name, not nickname
+    expect(results[0].matchedField).toBeUndefined();
+    expect(results[0].matchRanges.length).toBeGreaterThan(0);
+  });
+
+  it("sorts display_name matches before alternate field matches", () => {
+    // "John" matches display_name for John McGinty and John Smith,
+    // and given_name "Jonathan" for John Smith (but display_name wins)
+    const persons = [
+      makePerson("Alice Baker", { nickname: "Johnny" }),
+      makePerson("John Doe"),
+    ];
+    const results = searchPersons(persons, "John");
+    // John Doe (display_name prefix match) should come before Alice Baker (nickname match)
+    expect(results[0].person.display_name).toBe("John Doe");
+    expect(results[0].matchRanges.length).toBeGreaterThan(0);
+    expect(results[1].person.display_name).toBe("Alice Baker");
+    expect(results[1].matchedField).toBe("nickname");
+  });
+
+  it("nickname search is case-insensitive", () => {
+    const results = searchPersons(testPersons, "peggy");
+    expect(results).toHaveLength(1);
+    expect(results[0].person.display_name).toBe("Margaret Kirk");
   });
 });
