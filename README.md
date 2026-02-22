@@ -67,7 +67,7 @@ Run the migration in your Supabase SQL editor:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3002](http://localhost:3002).
 
 ### Deploy to Vercel
 

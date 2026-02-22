@@ -54,7 +54,7 @@ Or for a fresh database, you'll need the initial schema (contact project owner f
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit [http://localhost:3002](http://localhost:3002)
 
 ---
 
@@ -92,12 +92,12 @@ npm start
 
 ## Common Issues
 
-### Port 3000 Already in Use
+### Port 3002 Already in Use
 
 The dev server sometimes leaves zombie processes. Kill them:
 
 ```bash
-lsof -ti:3000 | xargs kill -9
+lsof -ti:3002 | xargs kill -9
 rm -f .next/dev/lock
 npm run dev
 ```

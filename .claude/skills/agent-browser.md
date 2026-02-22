@@ -53,7 +53,7 @@ agent-browser storage local                 # Access localStorage
 
 ```bash
 # Open the app
-agent-browser open http://localhost:3000
+agent-browser open http://localhost:3002
 
 # Take a screenshot
 agent-browser screenshot /tmp/test.png

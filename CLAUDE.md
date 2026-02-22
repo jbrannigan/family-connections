@@ -146,7 +146,7 @@ Test user: `jim.brannigan@gmail.com` (admin of the graph)
 ## Dev Commands
 
 ```bash
-npm run dev          # Start dev server (port 3000)
+npm run dev          # Start dev server (port 3002)
 npx tsc --noEmit     # Type check
 npm run lint         # ESLint
 npm run build        # Production build
@@ -154,7 +154,7 @@ npm run build        # Production build
 
 ## Known Issues / Dev Notes
 
-- **Port 3000 zombie process**: Dev server frequently dies during idle. Fix: `lsof -ti:3000 | xargs kill -9; rm -f .next/dev/lock; npm run dev`
+- **Port 3002 zombie process**: Dev server frequently dies during idle. Fix: `lsof -ti:3002 | xargs kill -9; rm -f .next/dev/lock; npm run dev`
 - **Chrome localhost navigation**: Claude in Chrome extension has trouble navigating to localhost from chrome://newtab — navigate to any URL first, then to localhost
 - **Large trees**: Very large family trees (500+ people) may have performance issues with the current tree renderer
 
@@ -168,103 +168,25 @@ See `NEXT-STEPS.md` for planned features and improvements.
 
 ---
 
-## Engineering Workflow
+## Shared Standards
 
-This project follows a structured engineering workflow. **All work must flow through this process.**
+Git workflow, versioning, code conventions, testing philosophy, and documentation duty
+are defined in `/Users/minime/Projects/STANDARDS.md`. Agent roles and delegation
+patterns are in `/Users/minime/Projects/AGENTS.md`. This file contains only
+Family Connections-specific details.
 
-### 1. Feature Lifecycle
+## Project-Specific Conventions
 
-Every change — feature, fix, refactor, or chore — follows this pipeline:
+- Feature docs go in `docs/features/` using template at `docs/features/_TEMPLATE.md`
+- Feature docs named `NNN-short-description.md` (e.g., `001-person-detail-page.md`)
+- Branches may include the feature number: `feat/NNN-short-description`
+- Update types in `src/types/database.ts` when schema changes
 
-```
-Feature Doc → Branch → Implement → Test → PR → Review → Merge → Version
-```
+## DevLauncher
+This project is registered in `/Users/minime/Projects/Agent Manager/config/projects.json`.
+If the dev server command, port, or startup requirements change, update that config file too.
 
-#### Step 1: Feature Document
-Before writing code, create a feature doc in `docs/features/`:
-- Use the template at `docs/features/_TEMPLATE.md`
-- Name it `NNN-short-description.md` (e.g., `001-person-detail-page.md`)
-- Describe: what, why, scope, acceptance criteria, test plan
-- A feature doc may map to **one or more PRs** (break large features into mergeable increments)
-
-#### Step 2: Feature Branch
-- Branch from `main` using the naming convention: `feat/NNN-short-description`, `fix/NNN-short-description`, or `chore/NNN-short-description`
-- Examples: `feat/001-person-detail-page`, `fix/002-date-validation`, `chore/003-add-vitest`
-
-#### Step 3: Implement
-- Write code in small, focused commits with clear messages
-- Follow existing patterns in the codebase (server components, Tailwind, TypeScript strict)
-- Update types in `src/types/database.ts` if schema changes
-- Update `CLAUDE.md` if architecture changes
-
-#### Step 4: Test
-- **Unit tests** (Vitest): For parsers, utilities, calculations, and pure logic (`*.test.ts` next to source files)
-- **Integration tests** (Vitest): For component rendering and API interactions (`__tests__/` directories)
-- **E2E tests** (Playwright): For critical user flows (`e2e/` directory)
-- Tests must pass locally before PR. Run: `npm test` (unit/integration), `npm run test:e2e` (E2E)
-
-#### Step 5: Pull Request
-- Push branch to origin, create PR via `gh pr create`
-- PR title: concise, under 70 chars
-- PR body: reference the feature doc, summarize changes, include test plan
-- **Claude must prompt the user to review and approve the PR before merging**
-- CI must pass (lint + typecheck + build + tests)
-- **Always update the repo `README.md`** to reflect any user-facing changes in the PR
-
-#### Step 6: Merge & Version
-- Squash-merge to `main` (keeps history clean)
-- After merging, decide if this warrants a version bump (see Versioning below)
-- Update `CHANGELOG.md` with what shipped
-
-### 2. Branching Model (GitHub Flow)
-
-```
-main (always deployable)
- └── feat/001-person-detail-page
- └── fix/002-date-validation
- └── chore/003-add-vitest
-```
-
-- `main` is the only long-lived branch
-- All work happens on short-lived feature/fix/chore branches
-- Merge via PR only — no direct commits to main
-- Delete branches after merge
-
-### 3. Versioning (Semantic Versioning)
-
-Format: `vMAJOR.MINOR.PATCH` (currently `v0.1.0` — pre-1.0 means breaking changes are expected)
-
-- **PATCH** (`0.1.1`): Bug fixes, small tweaks, dependency updates
-- **MINOR** (`0.2.0`): New features, non-breaking changes
-- **MAJOR** (`1.0.0`): Breaking changes, major milestones (1.0 = "ready for family to use")
-
-**When to bump:**
-- After merging a feature PR → bump MINOR
-- After merging a fix PR → bump PATCH
-- Multiple related PRs can share a version bump
-- Tag releases: `git tag v0.2.0 && git push --tags`
-- Update `version` in `package.json` and add entry to `CHANGELOG.md`
-
-### 4. Testing Strategy
-
-| Layer | Tool | Location | What to Test |
-|-------|------|----------|-------------|
-| Unit | Vitest | `*.test.ts` next to source | Parsers, utilities, calculations, pure functions |
-| Integration | Vitest + React Testing Library | `__tests__/` dirs | Component rendering, form behavior, state management |
-| E2E | Playwright | `e2e/` dir | Login flow, create graph, add person, import TreeDown, tree navigation |
-| Regression | Both | Tagged in describe blocks | Bugs that were fixed — prevent them from returning |
-
-**Regression test rule:** When fixing a bug, always write a test that reproduces the bug first, then fix it. The test prevents regression.
-
-**Test commands:**
-```bash
-npm test              # Run unit + integration tests (Vitest)
-npm run test:watch    # Run tests in watch mode
-npm run test:e2e      # Run E2E tests (Playwright)
-npm run test:all      # Run everything
-```
-
-### 5. CI Pipeline
+## CI Pipeline
 
 GitHub Actions runs on every PR and push to main:
 1. **Lint & Type Check** — ESLint + `tsc --noEmit`
@@ -274,7 +196,7 @@ GitHub Actions runs on every PR and push to main:
 
 All checks must pass before a PR can be merged.
 
-### 6. Database Changes
+## Database Changes
 
 1. Create migration in `supabase/migrations/` with descriptive name
 2. Run migration via Supabase MCP tool (`apply_migration`) or SQL Editor
@@ -282,47 +204,15 @@ All checks must pass before a PR can be merged.
 4. Update the schema section in this file (CLAUDE.md)
 5. Include migration in the PR — reviewer should see schema changes
 
-### 7. Claude-Specific Rules
+## Resuming Development
 
-When working with Claude (AI assistant):
-- **Always create a feature doc first** for non-trivial work
-- **Always create a feature branch** — never commit directly to main
-- **Always prompt the user to review the PR** before merging
-- **Always run tests** before creating a PR
-- **Always update CHANGELOG.md** after merging
-- **Ask before making architectural decisions** — present options, let the user choose
-- **Break large features into multiple PRs** — each PR should be reviewable in one sitting
-
-### 8. Resuming Development (New Session Checklist)
-
-When starting a fresh session (e.g., after context window reset), orient yourself before doing anything:
+Follow the New Session Checklist in `STANDARDS.md`, then also check:
 
 ```bash
-# 1. Where are we?
-git branch --show-current           # Should be main unless mid-feature
-git log --oneline -5                # Recent commits
-
-# 2. What version?
-node -p "require('./package.json').version"
-
-# 3. Any in-progress work?
-git status                          # Uncommitted changes?
-git stash list                      # Stashed work?
-gh pr list --author @me             # Open PRs?
-
-# 4. What shipped recently?
-head -40 CHANGELOG.md               # Latest version entry
-
-# 5. What's next?
 cat NEXT-STEPS.md                   # Roadmap with checkboxes
 ls docs/features/                   # Feature docs (check Status field)
 ```
 
-**Key files to read for context:**
-- `CLAUDE.md` (this file) — architecture, schema, patterns, workflow
-- `CHANGELOG.md` — what shipped and when
-- `NEXT-STEPS.md` — roadmap with checked/unchecked items
-- `docs/features/*.md` — any doc with `Status: In Progress` is active work
-- `package.json` — current version
-
-**If a feature doc has `Status: In Progress`**, read it fully — it contains the design, scope, and acceptance criteria for whatever was being worked on when the previous session ended.
+**If a feature doc has `Status: In Progress`**, read it fully — it contains the
+design, scope, and acceptance criteria for whatever was being worked on when the
+previous session ended.
